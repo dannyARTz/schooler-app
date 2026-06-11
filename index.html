@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0f1e" />
+  <meta name="description" content="SCHOOLER – Smart Attendance Platform" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="SCHOOLER" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>SCHOOLER – Attendance Platform</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════ SPLASH SCREEN ═══════════════════════════ -->
+<div id="splash" class="splash">
+  <div class="splash-logo">
+    <div class="splash-icon">
+      <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="14" fill="#1a6cff"/>
+        <path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/>
+        <path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/>
+        <rect x="41" y="22" width="3" height="14" rx="1.5" fill="white" opacity="0.6"/>
+        <circle cx="42.5" cy="38" r="3" fill="white" opacity="0.6"/>
+      </svg>
+    </div>
+    <h1 class="splash-title">SCHOOLER</h1>
+    <p class="splash-sub">Smart Attendance Platform</p>
+  </div>
+  <div class="splash-loader">
+    <div class="splash-bar"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ AUTH SCREEN ═══════════════════════════ -->
+<div id="authScreen" class="screen hidden">
+  <div class="auth-container">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
+          <rect width="56" height="56" rx="14" fill="#1a6cff"/>
+          <path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/>
+          <path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/>
+        </svg>
+      </div>
+      <h2>SCHOOLER</h2>
+      <p>Sign in to continue</p>
+    </div>
+
+    <div class="role-tabs">
+      <button class="role-tab active" data-role="lecturer">Lecturer</button>
+      <button class="role-tab" data-role="student">Student</button>
+    </div>
+
+    <div id="authForm" class="auth-form">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="authName" placeholder="e.g. Dr. Emeka Okafor" />
+      </div>
+      <div class="form-group" id="matricGroup" style="display:none;">
+        <label>Matric Number</label>
+        <input type="text" id="authMatric" placeholder="e.g. U/EE/22/1234" />
+      </div>
+      <div class="form-group" id="courseGroup">
+        <label>Course Code</label>
+        <input type="text" id="authCourse" placeholder="e.g. CSC 325" />
+      </div>
+      <div class="form-group" id="deptGroup">
+        <label>Department</label>
+        <input type="text" id="authDept" placeholder="e.g. Computer Science" />
+      </div>
+      <button class="btn-primary full-width" id="authBtn">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ LECTURER DASHBOARD ═══════════════════════════ -->
+<div id="lecturerDashboard" class="screen hidden">
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="14" fill="#1a6cff"/>
+        <path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/>
+        <path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/>
+      </svg>
+      <span>SCHOOLER</span>
+    </div>
+    <div class="nav-actions">
+      <button class="icon-btn" id="themeToggle" title="Toggle theme">
+        <svg id="themeIconDark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <svg id="themeIconLight" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+      <button class="icon-btn" id="lecturerLogout" title="Sign out">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="dashboard-main">
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="stat-info">
+          <span class="stat-num" id="statTotal">0</span>
+          <span class="stat-label">Present</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="stat-info">
+          <span class="stat-num" id="statRate">0%</span>
+          <span class="stat-label">Rate</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="stat-info">
+          <span class="stat-num" id="statSession">—</span>
+          <span class="stat-label">Session</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session panel -->
+    <div class="panel" id="sessionPanel">
+      <div class="panel-header">
+        <h3>Session Control</h3>
+        <div class="session-status" id="sessionStatusBadge"><span class="dot inactive"></span> Inactive</div>
+      </div>
+
+      <div id="startSessionArea">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Course</label>
+            <input type="text" id="sessionCourse" placeholder="e.g. CSC 325" />
+          </div>
+          <div class="form-group">
+            <label>Duration (mins)</label>
+            <input type="number" id="sessionDuration" value="60" min="5" max="300" />
+          </div>
+        </div>
+        <button class="btn-primary" id="startSessionBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          Start Session & Generate QR
+        </button>
+      </div>
+
+      <!-- Active session view -->
+      <div id="activeSessionArea" style="display:none;">
+        <div class="active-session-grid">
+          <!-- QR Block -->
+          <div class="qr-block">
+            <div class="qr-label">Rotating QR Code</div>
+            <div class="qr-wrapper">
+              <canvas id="qrCanvas" width="220" height="220"></canvas>
+              <div class="qr-overlay" id="qrCountdown">
+                <span id="countdownNum">10</span>
+                <small>refreshing</small>
+              </div>
+            </div>
+            <div class="qr-meta">
+              <span id="qrSessionCode" class="code-badge">—</span>
+              <span class="qr-hint">Updates every 10 seconds • Geo-locked</span>
+            </div>
+          </div>
+
+          <!-- Session info -->
+          <div class="session-info-block">
+            <div class="info-item">
+              <span class="info-label">Course</span>
+              <span class="info-val" id="activeCourseName">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Started</span>
+              <span class="info-val" id="activeStartTime">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Ends In</span>
+              <span class="info-val" id="activeTimeLeft" style="color: var(--accent-blue);">—</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Location Lock</span>
+              <span class="info-val geo-status" id="geoStatusDisplay">
+                <span class="dot green-dot"></span> Locked (30m radius)
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Session PIN</span>
+              <span class="info-val code-badge" id="activePIN">—</span>
+            </div>
+            <button class="btn-danger" id="endSessionBtn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              End Session
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="panel" id="attendancePanel">
+      <div class="panel-header">
+        <h3>Attendance Log</h3>
+        <div class="panel-actions">
+          <button class="btn-ghost" id="clearAttendanceBtn">Clear</button>
+          <button class="btn-export" id="exportBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export Excel
+          </button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="attendance-table" id="attendanceTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Matric No.</th>
+              <th>Time</th>
+              <th>Location Δ</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceBody">
+            <tr class="empty-row">
+              <td colspan="6">
+                <div class="empty-state">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <p>No students checked in yet</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════ STUDENT SCAN SCREEN ═══════════════════════════ -->
+<div id="studentDashboard" class="screen hidden">
+
+  <nav class="navbar">
+    <div class="nav-brand">
+      <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="14" fill="#1a6cff"/>
+        <path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/>
+        <path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/>
+      </svg>
+      <span>SCHOOLER</span>
+    </div>
+    <div class="nav-actions">
+      <button class="icon-btn" id="themeToggleStudent" title="Toggle theme">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+      <button class="icon-btn" id="studentLogout" title="Sign out">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="student-main">
+    <div class="student-hero">
+      <div class="student-avatar">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <div>
+        <h2 id="studentName">Student</h2>
+        <p id="studentMatricDisplay" class="student-meta">—</p>
+      </div>
+    </div>
+
+    <!-- Scan card -->
+    <div class="scan-card" id="scanCard">
+      <div class="scan-header">
+        <h3>Mark Attendance</h3>
+        <p>Position your camera over the lecturer's QR code</p>
+      </div>
+
+      <div class="scanner-wrap" id="scannerWrap">
+        <video id="scannerVideo" autoplay muted playsinline></video>
+        <canvas id="scannerCanvas" style="display:none;"></canvas>
+        <div class="scan-frame">
+          <div class="corner tl"></div>
+          <div class="corner tr"></div>
+          <div class="corner bl"></div>
+          <div class="corner br"></div>
+          <div class="scan-line"></div>
+        </div>
+        <div class="scan-hint" id="scanHint">Tap to start camera</div>
+      </div>
+
+      <button class="btn-primary full-width" id="startScanBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><path d="M21 16h-3a2 2 0 0 0-2 2v3M21 21v.01M12 7v3a2 2 0 0 1-2 2H7M3 12h.01M12 3h.01M12 16v.01M16 12h1a2 2 0 0 1 2 2v1"/></svg>
+        Start Scanner
+      </button>
+
+      <!-- Manual code fallback -->
+      <details class="manual-fallback">
+        <summary>Enter session code manually</summary>
+        <div class="manual-form">
+          <input type="text" id="manualCode" placeholder="Session code from lecturer" maxlength="20" />
+          <button class="btn-secondary" id="manualSubmitBtn">Submit</button>
+        </div>
+      </details>
+    </div>
+
+    <!-- Status card -->
+    <div class="status-card hidden" id="statusCard">
+      <div class="status-icon" id="statusIcon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3 id="statusTitle">Attendance Marked!</h3>
+      <p id="statusMsg">You have been recorded for this session.</p>
+      <div class="status-meta" id="statusMeta"></div>
+      <button class="btn-ghost" id="scanAgainBtn">Scan Another</button>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════ TOAST ═══════════════════════════ -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- ═══════════════════════════ MODAL ═══════════════════════════ -->
+<div id="modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="modalTitle">Confirm</h3>
+    <p id="modalMsg">Are you sure?</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" id="modalCancel">Cancel</button>
+      <button class="btn-danger" id="modalConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/qrgen.js"></script>
+<script src="js/jsQR.js"></script>
+<script src="js/xlsx.full.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
