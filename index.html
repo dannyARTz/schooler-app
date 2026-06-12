@@ -16,7 +16,7 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════ SPLASH SCREEN ═══════════════════════════ -->
+<!-- ═══════════════════ SPLASH ═══════════════════ -->
 <div id="splash" class="splash">
   <div class="splash-logo">
     <div class="splash-icon">
@@ -31,12 +31,10 @@
     <h1 class="splash-title">SCHOOLER</h1>
     <p class="splash-sub">Smart Attendance Platform</p>
   </div>
-  <div class="splash-loader">
-    <div class="splash-bar"></div>
-  </div>
+  <div class="splash-loader"><div class="splash-bar"></div></div>
 </div>
 
-<!-- ═══════════════════════════ AUTH SCREEN ═══════════════════════════ -->
+<!-- ═══════════════════ AUTH ═══════════════════ -->
 <div id="authScreen" class="screen hidden">
   <div class="auth-container">
     <div class="auth-header">
@@ -54,6 +52,12 @@
     <div class="role-tabs">
       <button class="role-tab active" data-role="lecturer">Lecturer</button>
       <button class="role-tab" data-role="student">Student</button>
+    </div>
+
+    <!-- Device binding warning (shown when student logs in on new device) -->
+    <div id="deviceWarning" class="alert-banner hidden">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>This account is registered on another device. Request approval to switch devices.</span>
     </div>
 
     <div id="authForm" class="auth-form">
@@ -78,10 +82,9 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════ LECTURER DASHBOARD ═══════════════════════════ -->
+<!-- ═══════════════════ LECTURER DASHBOARD ═══════════════════ -->
 <div id="lecturerDashboard" class="screen hidden">
 
-  <!-- Navbar -->
   <nav class="navbar">
     <div class="nav-brand">
       <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
@@ -92,6 +95,10 @@
       <span>SCHOOLER</span>
     </div>
     <div class="nav-actions">
+      <div class="offline-badge hidden" id="offlineBadge" title="No internet — data saved locally">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+        Offline
+      </div>
       <button class="icon-btn" id="themeToggle" title="Toggle theme">
         <svg id="themeIconDark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg id="themeIconLight" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -102,27 +109,33 @@
     </div>
   </nav>
 
-  <!-- Main content -->
   <main class="dashboard-main">
 
     <!-- Stats row -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-icon blue"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <div class="stat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
         <div class="stat-info">
           <span class="stat-num" id="statTotal">0</span>
           <span class="stat-label">Present</span>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon green"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="stat-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
         <div class="stat-info">
           <span class="stat-num" id="statRate">0%</span>
           <span class="stat-label">Rate</span>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon amber"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="stat-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="stat-info">
+          <span class="stat-num" id="statFlagged">0</span>
+          <span class="stat-label">Flagged</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
         <div class="stat-info">
           <span class="stat-num" id="statSession">—</span>
           <span class="stat-label">Session</span>
@@ -130,13 +143,14 @@
       </div>
     </div>
 
-    <!-- Session panel -->
+    <!-- Session Panel -->
     <div class="panel" id="sessionPanel">
       <div class="panel-header">
         <h3>Session Control</h3>
         <div class="session-status" id="sessionStatusBadge"><span class="dot inactive"></span> Inactive</div>
       </div>
 
+      <!-- Pre-session config -->
       <div id="startSessionArea">
         <div class="form-row">
           <div class="form-group">
@@ -148,18 +162,114 @@
             <input type="number" id="sessionDuration" value="60" min="5" max="300" />
           </div>
         </div>
+
+        <!-- Anti-cheating settings -->
+        <div class="settings-section">
+          <div class="settings-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Anti-Cheating Settings
+          </div>
+
+          <div class="toggle-group">
+            <!-- Dynamic QR — ON by default -->
+            <div class="toggle-item">
+              <div class="toggle-info">
+                <span class="toggle-label">Dynamic QR Codes</span>
+                <span class="toggle-desc">QR refreshes every 10 seconds. Screenshots become useless.</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingQR" checked disabled />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <!-- Device Binding — ON by default -->
+            <div class="toggle-item">
+              <div class="toggle-info">
+                <span class="toggle-label">Device Binding</span>
+                <span class="toggle-desc">Each student account is tied to one device. Proxy attendance requires physical phone.</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingDevice" checked />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <!-- Spot Checks — ON by default -->
+            <div class="toggle-item">
+              <div class="toggle-info">
+                <span class="toggle-label">Random Spot Checks</span>
+                <span class="toggle-desc">Randomly selects <strong>5%</strong> of attendees for physical presence confirmation.</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingSpotCheck" checked />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <!-- Divider with advisory -->
+            <div class="settings-advisory">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Geolocation and Bluetooth improve verification but may fail on some devices or environments. Enable only when additional security is required.
+            </div>
+
+            <!-- Geolocation — OFF by default -->
+            <div class="toggle-item">
+              <div class="toggle-info">
+                <span class="toggle-label">Geolocation Verification</span>
+                <span class="toggle-desc">Students must be within set radius of classroom. May be unreliable indoors.</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingGeo" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <!-- Geo radius (visible only when geo is on) -->
+            <div class="toggle-subfield hidden" id="geoRadiusField">
+              <label>Radius (metres)</label>
+              <input type="number" id="geoRadius" value="50" min="10" max="500" />
+              <span class="field-note">⚠ GPS accuracy indoors may be unreliable. Students may experience difficulties if location services are weak.</span>
+            </div>
+
+            <!-- BLE — OFF by default -->
+            <div class="toggle-item">
+              <div class="toggle-info">
+                <span class="toggle-label">Bluetooth (BLE) Verification</span>
+                <span class="toggle-desc">Confirms students are near the classroom beacon. Fallback to QR if unsupported.</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingBLE" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+
+            <!-- Selfie — OFF by default -->
+            <div class="toggle-item">
+              <div class="toggle-info">
+                <span class="toggle-label">Selfie Verification</span>
+                <span class="toggle-desc">Students capture a live photo after scanning. Consent required. Lecturer can override failures.</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingSelfie" />
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
         <button class="btn-primary" id="startSessionBtn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
           Start Session & Generate QR
         </button>
       </div>
 
-      <!-- Active session view -->
+      <!-- Active session -->
       <div id="activeSessionArea" style="display:none;">
         <div class="active-session-grid">
           <!-- QR Block -->
           <div class="qr-block">
-            <div class="qr-label">Rotating QR Code</div>
+            <div class="qr-label">Dynamic QR Code</div>
             <div class="qr-wrapper">
               <canvas id="qrCanvas" width="220" height="220"></canvas>
               <div class="qr-overlay" id="qrCountdown">
@@ -169,7 +279,7 @@
             </div>
             <div class="qr-meta">
               <span id="qrSessionCode" class="code-badge">—</span>
-              <span class="qr-hint">Updates every 10 seconds • Geo-locked</span>
+              <span class="qr-hint">Updates every 10 seconds • Cryptographically signed</span>
             </div>
           </div>
 
@@ -185,13 +295,17 @@
             </div>
             <div class="info-item">
               <span class="info-label">Ends In</span>
-              <span class="info-val" id="activeTimeLeft" style="color: var(--accent-blue);">—</span>
+              <span class="info-val" id="activeTimeLeft" style="color:var(--accent-blue);">—</span>
+            </div>
+            <div class="info-item" id="geoStatusRow">
+              <span class="info-label">Geo-fence</span>
+              <span class="info-val geo-status" id="geoStatusDisplay">
+                <span class="dot" style="background:var(--text-muted)"></span> Disabled
+              </span>
             </div>
             <div class="info-item">
-              <span class="info-label">Location Lock</span>
-              <span class="info-val geo-status" id="geoStatusDisplay">
-                <span class="dot green-dot"></span> Locked (30m radius)
-              </span>
+              <span class="info-label">Active Checks</span>
+              <span class="info-val" id="activeChecksDisplay">—</span>
             </div>
             <div class="info-item">
               <span class="info-label">Session PIN</span>
@@ -206,6 +320,22 @@
       </div>
     </div>
 
+    <!-- Spot Check Panel (shown when spot checks triggered) -->
+    <div class="panel hidden" id="spotCheckPanel">
+      <div class="panel-header">
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--amber)"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Spot Check
+        </h3>
+        <button class="btn-ghost" id="triggerSpotCheckBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          New Check
+        </button>
+      </div>
+      <div class="spot-check-note">Please confirm the presence of the following students.</div>
+      <div id="spotCheckList" class="spot-check-list"></div>
+    </div>
+
     <!-- Attendance Table -->
     <div class="panel" id="attendancePanel">
       <div class="panel-header">
@@ -218,29 +348,20 @@
           </button>
         </div>
       </div>
-
       <div class="table-wrap">
-        <table class="attendance-table" id="attendanceTable">
+        <table class="attendance-table">
           <thead>
             <tr>
               <th>#</th>
               <th>Name</th>
               <th>Matric No.</th>
               <th>Time</th>
-              <th>Location Δ</th>
+              <th>Distance</th>
+              <th>Device</th>
               <th>Status</th>
             </tr>
           </thead>
-          <tbody id="attendanceBody">
-            <tr class="empty-row">
-              <td colspan="6">
-                <div class="empty-state">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  <p>No students checked in yet</p>
-                </div>
-              </td>
-            </tr>
-          </tbody>
+          <tbody id="attendanceBody"></tbody>
         </table>
       </div>
     </div>
@@ -248,7 +369,7 @@
   </main>
 </div>
 
-<!-- ═══════════════════════════ STUDENT SCAN SCREEN ═══════════════════════════ -->
+<!-- ═══════════════════ STUDENT DASHBOARD ═══════════════════ -->
 <div id="studentDashboard" class="screen hidden">
 
   <nav class="navbar">
@@ -261,6 +382,10 @@
       <span>SCHOOLER</span>
     </div>
     <div class="nav-actions">
+      <div class="offline-badge hidden" id="offlineBadgeStudent" title="Offline — attendance queued">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+        Offline
+      </div>
       <button class="icon-btn" id="themeToggleStudent" title="Toggle theme">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       </button>
@@ -271,6 +396,20 @@
   </nav>
 
   <main class="student-main">
+
+    <!-- Offline queue banner -->
+    <div id="offlineQueueBanner" class="alert-banner amber hidden">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>Your attendance has been saved locally and will sync once internet access is restored.</span>
+    </div>
+
+    <!-- Spot check notification -->
+    <div id="spotCheckNotification" class="alert-banner blue hidden">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span>You have been selected for a presence check. Please raise your hand.</span>
+    </div>
+
+    <!-- Hero card -->
     <div class="student-hero">
       <div class="student-avatar">
         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -278,6 +417,10 @@
       <div>
         <h2 id="studentName">Student</h2>
         <p id="studentMatricDisplay" class="student-meta">—</p>
+      </div>
+      <div class="device-chip" id="deviceChip" title="This device is bound to your account">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        Bound
       </div>
     </div>
 
@@ -306,7 +449,6 @@
         Start Scanner
       </button>
 
-      <!-- Manual code fallback -->
       <details class="manual-fallback">
         <summary>Enter session code manually</summary>
         <div class="manual-form">
@@ -326,13 +468,28 @@
       <div class="status-meta" id="statusMeta"></div>
       <button class="btn-ghost" id="scanAgainBtn">Scan Another</button>
     </div>
+
+    <!-- Attendance History -->
+    <div class="panel" id="historyPanel">
+      <div class="panel-header">
+        <h3>My Attendance History</h3>
+        <span class="stat-chip" id="historyRate">—</span>
+      </div>
+      <div id="historyList" class="history-list">
+        <div class="empty-state" style="padding:24px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p>No attendance records yet</p>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
-<!-- ═══════════════════════════ TOAST ═══════════════════════════ -->
+<!-- ═══════════════════ TOAST ═══════════════════ -->
 <div id="toast" class="toast hidden"></div>
 
-<!-- ═══════════════════════════ MODAL ═══════════════════════════ -->
+<!-- ═══════════════════ MODAL ═══════════════════ -->
 <div id="modal" class="modal-overlay hidden">
   <div class="modal-box">
     <h3 id="modalTitle">Confirm</h3>
@@ -344,7 +501,6 @@
   </div>
 </div>
 
-<!-- Scripts -->
 <script src="js/qrgen.js"></script>
 <script src="js/jsQR.js"></script>
 <script src="js/xlsx.full.min.js"></script>
