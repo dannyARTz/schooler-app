@@ -1032,3 +1032,76 @@ img, svg { display: block; }
 
 /* ─── ACTIVE SESSION DATE ────────────────────────── */
 #activeSessionDate { color: var(--text-secondary); font-size: 0.875rem; }
+
+/* ─── GOOGLE SSO SCREEN ──────────────────────────── */
+.sso-hint {
+  font-size: 0.82rem; color: var(--text-secondary);
+  text-align: center; line-height: 1.55;
+  padding: 0 4px;
+}
+.google-btn-wrap {
+  display: flex; justify-content: center;
+  min-height: 44px; align-items: center;
+}
+.sso-loading {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; color: var(--text-muted);
+  padding: 10px 0;
+}
+.dev-mode-notice {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem; color: var(--amber);
+  margin-bottom: 12px;
+}
+.dev-sign-in-form { display: flex; flex-direction: column; gap: 10px; }
+.dev-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  color: var(--text-primary); font-size: 0.875rem;
+  outline: none; font-family: inherit;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.dev-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-glow);
+}
+
+/* ─── COMPLETION SCREEN ──────────────────────────── */
+.google-avatar-wrap {
+  display: flex; align-items: center; gap: 14px;
+  justify-content: center;
+}
+.google-avatar-lg {
+  width: 52px; height: 52px; border-radius: 50%;
+  border: 2px solid var(--accent-blue);
+  object-fit: cover;
+}
+.completion-name  { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+.completion-email { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+
+/* ─── NAVBAR USER PILL ───────────────────────────── */
+.nav-user-pill {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 10px 4px 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  cursor: default;
+}
+.nav-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+.nav-username {
+  font-size: 0.8rem; font-weight: 500;
+  color: var(--text-secondary);
+  max-width: 90px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
