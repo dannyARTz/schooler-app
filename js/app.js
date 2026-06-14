@@ -50,148 +50,154 @@ const STORAGE_KEY     = 'schooler_state_v3';
 const SPOT_CHECK_PCT  = 0.05;
 
 // ═══════════════════════════════════════════════════════
-//  DOM
+//  DOM  — populated after DOMContentLoaded
 // ═══════════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
-const DOM = {
-  splash:               $('splash'),
-  // SSO screens
-  authScreen:           $('authScreen'),
-  completionScreen:     $('completionScreen'),
-  googleSignInBtn:      $('googleSignInBtn'),
-  ssoFallbackBtn:       $('ssoFallbackBtn'),
-  ssoError:             $('ssoError'),
-  ssoErrorText:         $('ssoErrorText'),
-  ssoHint:              $('ssoHint'),
-  completionAvatar:     $('completionAvatar'),
-  completionName:       $('completionName'),
-  completionEmail:      $('completionEmail'),
-  completionSubtitle:   $('completionSubtitle'),
-  completionForm:       $('completionForm'),
-  deviceWarning:        $('deviceWarning'),
-  roleTabs:             document.querySelectorAll('.role-tab'),
-  // Hidden compat inputs (auto-filled from Google profile)
-  authName:             $('authName'),
-  authMatric:           $('authMatric'),
-  authCourse:           $('authCourse'),
-  authDept:             $('authDept'),
-  authBtn:              $('authBtn'),
-  matricGroup:          $('matricGroup'),
-  courseGroup:          $('courseGroup'),
-  // Sheets sync badge
-  sheetsSyncBadge:      $('sheetsSyncBadge'),
-  sheetsSyncText:       $('sheetsSyncText'),
-  sheetsSyncStatus:     $('sheetsSyncStatus'),
-  sheetsPollingBar:     $('sheetsPollingBar'),
-  // Dashboards
-  lecturerDash:         $('lecturerDashboard'),
-  studentDash:          $('studentDashboard'),
-  // Navbar avatars
-  lecturerUserPill:     $('lecturerUserPill'),
-  lecturerAvatar:       $('lecturerAvatar'),
-  lecturerDisplayName:  $('lecturerDisplayName'),
-  studentUserPill:      $('studentUserPill'),
-  studentNavAvatar:     $('studentNavAvatar'),
-  studentNavName:       $('studentNavName'),
-  // Stats
-  statTotal:            $('statTotal'),
-  statRate:             $('statRate'),
-  statFlagged:          $('statFlagged'),
-  statSession:          $('statSession'),
-  // Settings
-  settingQR:            $('settingQR'),
-  settingDevice:        $('settingDevice'),
-  settingSpotCheck:     $('settingSpotCheck'),
-  settingGeo:           $('settingGeo'),
-  settingBLE:           $('settingBLE'),
-  settingSelfie:        $('settingSelfie'),
-  geoRadiusField:       $('geoRadiusField'),
-  geoRadius:            $('geoRadius'),
-  // Session
-  sessionCourse:        $('sessionCourse'),
-  sessionDuration:      $('sessionDuration'),
-  startSessionBtn:      $('startSessionBtn'),
-  endSessionBtn:        $('endSessionBtn'),
-  startSessionArea:     $('startSessionArea'),
-  activeSessionArea:    $('activeSessionArea'),
-  sessionStatusBadge:   $('sessionStatusBadge'),
-  // QR display
-  qrCanvas:             $('qrCanvas'),
-  countdownNum:         $('countdownNum'),
-  qrSessionCode:        $('qrSessionCode'),
-  qrWrapper:            document.querySelector('.qr-wrapper'),
-  // Active info
-  activeCourseName:     $('activeCourseName'),
-  activeSessionDate:    $('activeSessionDate'),
-  activeStartTime:      $('activeStartTime'),
-  activeTimeLeft:       $('activeTimeLeft'),
-  geoStatusDisplay:     $('geoStatusDisplay'),
-  activeChecksDisplay:  $('activeChecksDisplay'),
-  activePIN:            $('activePIN'),
-  // BLE beacon
-  bleBeaconBtn:         $('bleBeaconBtn'),
-  bleBeaconText:        $('bleBeaconText'),
-  // Spot check
-  spotCheckPanel:       $('spotCheckPanel'),
-  spotCheckList:        $('spotCheckList'),
-  triggerSpotCheckBtn:  $('triggerSpotCheckBtn'),
-  // Table
-  attendanceBody:       $('attendanceBody'),
-  exportBtn:            $('exportBtn'),
-  clearAttendanceBtn:   $('clearAttendanceBtn'),
-  // Student
-  studentName:          $('studentName'),
-  studentMatricDisplay: $('studentMatricDisplay'),
-  deviceChip:           $('deviceChip'),
-  offlineQueueBanner:   $('offlineQueueBanner'),
-  spotCheckNotification:$('spotCheckNotification'),
-  scannerVideo:         $('scannerVideo'),
-  scannerCanvas:        $('scannerCanvas'),
-  startScanBtn:         $('startScanBtn'),
-  scanHint:             $('scanHint'),
-  scanSubtitle:         $('scanSubtitle'),
-  scanCard:             $('scanCard'),
-  statusCard:           $('statusCard'),
-  statusIcon:           $('statusIcon'),
-  statusTitle:          $('statusTitle'),
-  statusMsg:            $('statusMsg'),
-  statusMeta:           $('statusMeta'),
-  scanAgainBtn:         $('scanAgainBtn'),
-  manualCode:           $('manualCode'),
-  manualSubmitBtn:      $('manualSubmitBtn'),
-  historyList:          $('historyList'),
-  historyRate:          $('historyRate'),
-  // Selfie
-  selfieModal:          $('selfieModal'),
-  selfieVideo:          $('selfieVideo'),
-  selfieCanvas:         $('selfieCanvas'),
-  selfieCaptureBtn:     $('selfieCaptureBtn'),
-  selfieCancelBtn:      $('selfieCancelBtn'),
-  // Network
-  offlineBadge:         $('offlineBadge'),
-  offlineBadgeStudent:  $('offlineBadgeStudent'),
-  // UI
-  toast:                $('toast'),
-  modal:                $('modal'),
-  modalTitle:           $('modalTitle'),
-  modalMsg:             $('modalMsg'),
-  modalCancel:          $('modalCancel'),
-  modalConfirm:         $('modalConfirm'),
-  themeToggle:          $('themeToggle'),
-  themeToggleStudent:   $('themeToggleStudent'),
-  themeIconDark:        $('themeIconDark'),
-  themeIconLight:       $('themeIconLight'),
-  lecturerLogout:       $('lecturerLogout'),
-  studentLogout:        $('studentLogout'),
-};
+let DOM = {};   // filled by initDOM() once the page is ready
+
+function initDOM() {
+  DOM = {
+    splash:               $('splash'),
+    // SSO screens
+    authScreen:           $('authScreen'),
+    completionScreen:     $('completionScreen'),
+    googleSignInBtn:      $('googleSignInBtn'),
+    ssoFallbackBtn:       $('ssoFallbackBtn'),
+    ssoError:             $('ssoError'),
+    ssoErrorText:         $('ssoErrorText'),
+    ssoHint:              $('ssoHint'),
+    completionAvatar:     $('completionAvatar'),
+    completionName:       $('completionName'),
+    completionEmail:      $('completionEmail'),
+    completionSubtitle:   $('completionSubtitle'),
+    completionForm:       $('completionForm'),
+    deviceWarning:        $('deviceWarning'),
+    roleTabs:             document.querySelectorAll('.role-tab'),
+    // Hidden compat inputs (auto-filled from Google profile)
+    authName:             $('authName'),
+    authMatric:           $('authMatric'),
+    authCourse:           $('authCourse'),
+    authDept:             $('authDept'),
+    authBtn:              $('authBtn'),
+    matricGroup:          $('matricGroup'),
+    courseGroup:          $('courseGroup'),
+    // Sheets sync badge
+    sheetsSyncBadge:      $('sheetsSyncBadge'),
+    sheetsSyncText:       $('sheetsSyncText'),
+    sheetsSyncStatus:     $('sheetsSyncStatus'),
+    sheetsPollingBar:     $('sheetsPollingBar'),
+    // Dashboards
+    lecturerDash:         $('lecturerDashboard'),
+    studentDash:          $('studentDashboard'),
+    // Navbar avatars
+    lecturerUserPill:     $('lecturerUserPill'),
+    lecturerAvatar:       $('lecturerAvatar'),
+    lecturerDisplayName:  $('lecturerDisplayName'),
+    studentUserPill:      $('studentUserPill'),
+    studentNavAvatar:     $('studentNavAvatar'),
+    studentNavName:       $('studentNavName'),
+    // Stats
+    statTotal:            $('statTotal'),
+    statRate:             $('statRate'),
+    statFlagged:          $('statFlagged'),
+    statSession:          $('statSession'),
+    // Settings
+    settingQR:            $('settingQR'),
+    settingDevice:        $('settingDevice'),
+    settingSpotCheck:     $('settingSpotCheck'),
+    settingGeo:           $('settingGeo'),
+    settingBLE:           $('settingBLE'),
+    settingSelfie:        $('settingSelfie'),
+    geoRadiusField:       $('geoRadiusField'),
+    geoRadius:            $('geoRadius'),
+    // Session
+    sessionCourse:        $('sessionCourse'),
+    sessionDuration:      $('sessionDuration'),
+    startSessionBtn:      $('startSessionBtn'),
+    endSessionBtn:        $('endSessionBtn'),
+    startSessionArea:     $('startSessionArea'),
+    activeSessionArea:    $('activeSessionArea'),
+    sessionStatusBadge:   $('sessionStatusBadge'),
+    // QR display
+    qrCanvas:             $('qrCanvas'),
+    countdownNum:         $('countdownNum'),
+    qrSessionCode:        $('qrSessionCode'),
+    qrWrapper:            document.querySelector('.qr-wrapper'),
+    // Active info
+    activeCourseName:     $('activeCourseName'),
+    activeSessionDate:    $('activeSessionDate'),
+    activeStartTime:      $('activeStartTime'),
+    activeTimeLeft:       $('activeTimeLeft'),
+    geoStatusDisplay:     $('geoStatusDisplay'),
+    activeChecksDisplay:  $('activeChecksDisplay'),
+    activePIN:            $('activePIN'),
+    // BLE beacon
+    bleBeaconBtn:         $('bleBeaconBtn'),
+    bleBeaconText:        $('bleBeaconText'),
+    // Spot check
+    spotCheckPanel:       $('spotCheckPanel'),
+    spotCheckList:        $('spotCheckList'),
+    triggerSpotCheckBtn:  $('triggerSpotCheckBtn'),
+    // Table
+    attendanceBody:       $('attendanceBody'),
+    exportBtn:            $('exportBtn'),
+    clearAttendanceBtn:   $('clearAttendanceBtn'),
+    // Student
+    studentName:          $('studentName'),
+    studentMatricDisplay: $('studentMatricDisplay'),
+    deviceChip:           $('deviceChip'),
+    offlineQueueBanner:   $('offlineQueueBanner'),
+    spotCheckNotification:$('spotCheckNotification'),
+    scannerVideo:         $('scannerVideo'),
+    scannerCanvas:        $('scannerCanvas'),
+    startScanBtn:         $('startScanBtn'),
+    scanHint:             $('scanHint'),
+    scanSubtitle:         $('scanSubtitle'),
+    scanCard:             $('scanCard'),
+    statusCard:           $('statusCard'),
+    statusIcon:           $('statusIcon'),
+    statusTitle:          $('statusTitle'),
+    statusMsg:            $('statusMsg'),
+    statusMeta:           $('statusMeta'),
+    scanAgainBtn:         $('scanAgainBtn'),
+    manualCode:           $('manualCode'),
+    manualSubmitBtn:      $('manualSubmitBtn'),
+    historyList:          $('historyList'),
+    historyRate:          $('historyRate'),
+    // Selfie
+    selfieModal:          $('selfieModal'),
+    selfieVideo:          $('selfieVideo'),
+    selfieCanvas:         $('selfieCanvas'),
+    selfieCaptureBtn:     $('selfieCaptureBtn'),
+    selfieCancelBtn:      $('selfieCancelBtn'),
+    // Network
+    offlineBadge:         $('offlineBadge'),
+    offlineBadgeStudent:  $('offlineBadgeStudent'),
+    // UI
+    toast:                $('toast'),
+    modal:                $('modal'),
+    modalTitle:           $('modalTitle'),
+    modalMsg:             $('modalMsg'),
+    modalCancel:          $('modalCancel'),
+    modalConfirm:         $('modalConfirm'),
+    themeToggle:          $('themeToggle'),
+    themeToggleStudent:   $('themeToggleStudent'),
+    themeIconDark:        $('themeIconDark'),
+    themeIconLight:       $('themeIconLight'),
+    lecturerLogout:       $('lecturerLogout'),
+    studentLogout:        $('studentLogout'),
+  };
+}
 
 // ═══════════════════════════════════════════════════════
 //  BOOT
 // ═══════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  initDOM();          // ← must be first — populates all DOM refs
   loadTheme();
   initDeviceId();
   initNetworkListeners();
+  initEventListeners(); // ← wire all buttons/inputs now that DOM exists
   setTimeout(bootApp, 1900);
 });
 
@@ -201,11 +207,9 @@ function bootApp() {
     DOM.splash.style.display = 'none';
     const saved = loadSavedState();
     if (saved && saved.googleProfile) {
-      // Restore signed-in session
       STATE.googleProfile = saved.googleProfile;
       restoreSession(saved);
     } else {
-      // First launch or signed out — show SSO screen
       showScreen('auth');
       initGoogleSSO();
     }
@@ -213,23 +217,80 @@ function bootApp() {
 }
 
 // ═══════════════════════════════════════════════════════
+//  EVENT LISTENERS — all wired here after DOM is ready
+// ═══════════════════════════════════════════════════════
+function initEventListeners() {
+  // Theme
+  DOM.themeToggle.addEventListener('click', toggleTheme);
+  DOM.themeToggleStudent.addEventListener('click', toggleTheme);
+
+  // Settings panel
+  initSettingsListeners();
+
+  // SSO role tabs
+  DOM.roleTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      DOM.roleTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      selectedRole = tab.dataset.role;
+      DOM.deviceWarning.classList.add('hidden');
+      DOM.ssoHint.innerHTML = selectedRole === 'lecturer'
+        ? 'Your Google account auto-creates your attendance sheet. No setup needed.'
+        : 'Signing in with Google verifies your identity. Each student needs their own Google account.';
+    });
+  });
+
+  // Completion form & fallback
+  DOM.authBtn.addEventListener('click', handleAuth);
+  DOM.ssoFallbackBtn.addEventListener('click', () => {
+    STATE.googleProfile = { name: 'Local User', email: 'local@schooler.app', picture: '', sub: generateId(16) };
+    STATE.sheetsReady   = false;
+    DOM.authName.value  = 'Local User';
+    handlePostGoogle();
+    showToast('Running in local-only mode. Attendance will not sync to Sheets.', 'info');
+  });
+
+  // Logouts
+  DOM.lecturerLogout.addEventListener('click', () => {
+    confirmModal('Sign out?', 'This will end any active session and sign you out of Google.', () => {
+      endSession(true); bleStopBeacon(); googleSignOut();
+    });
+  });
+  DOM.studentLogout.addEventListener('click', () => {
+    stopScanner(); sheetsStopPolling(); googleSignOut();
+  });
+
+  // Session
+  DOM.startSessionBtn.addEventListener('click', startSession);
+  DOM.endSessionBtn.addEventListener('click', () => {
+    confirmModal('End Session?', 'Students can no longer check in. Records stay in Sheets.', () => endSession(false));
+  });
+
+  // Spot check
+  DOM.triggerSpotCheckBtn.addEventListener('click', triggerSpotCheck);
+
+  // Attendance table
+  DOM.clearAttendanceBtn.addEventListener('click', () => {
+    confirmModal('Clear Log?', 'Removes records from this view. Sheets data is not deleted.', () => {
+      STATE.attendance = []; renderAttendanceTable(); updateStats(); saveStateSnapshot();
+    });
+  });
+  DOM.exportBtn.addEventListener('click', exportExcel);
+
+  // Scanner
+  DOM.startScanBtn.addEventListener('click', startScanner);
+  DOM.scanAgainBtn.addEventListener('click', resetStudentScan);
+  DOM.manualSubmitBtn.addEventListener('click', handleManualCode);
+
+  // Modal close
+  DOM.modalCancel.addEventListener('click', () => DOM.modal.classList.add('hidden'));
+}
+
+// ═══════════════════════════════════════════════════════
 //  GOOGLE SSO  (Google Identity Services)
 // ═══════════════════════════════════════════════════════
 
 let selectedRole = 'lecturer';
-
-// Role tabs on auth screen
-DOM.roleTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    DOM.roleTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    selectedRole = tab.dataset.role;
-    // Update hint text
-    DOM.ssoHint.innerHTML = selectedRole === 'lecturer'
-      ? 'Your Google account auto-creates your attendance sheet. No setup needed.'
-      : 'Signing in with Google verifies your identity. Each student needs their own Google account.';
-  });
-});
 
 function initGoogleSSO() {
   const clientId = window.SCHOOLER_CLIENT_ID;
@@ -373,7 +434,10 @@ function handlePostGoogle() {
   }
 }
 
-DOM.authBtn.addEventListener('click', handleAuth);
+function showSSOError(msg) {
+  DOM.ssoErrorText.textContent = msg;
+  DOM.ssoError.classList.remove('hidden');
+}
 
 function handleAuth() {
   const name   = (DOM.authName.value || STATE.googleProfile?.name || '').trim();
@@ -446,20 +510,6 @@ function renderDevModeSignIn() {
   });
 }
 
-// ─── Fallback (offline / GIS blocked) ────────────
-DOM.ssoFallbackBtn.addEventListener('click', () => {
-  STATE.googleProfile = { name: 'Local User', email: 'local@schooler.app', picture: '', sub: generateId(16) };
-  STATE.sheetsReady   = false;
-  DOM.authName.value  = 'Local User';
-  handlePostGoogle();
-  showToast('Running in local-only mode. Attendance will not sync to Sheets.', 'info');
-});
-
-function showSSOError(msg) {
-  DOM.ssoErrorText.textContent = msg;
-  DOM.ssoError.classList.remove('hidden');
-}
-
 // ─── Populate navbar avatar ───────────────────────
 function populateNavAvatar(role) {
   const p = STATE.googleProfile;
@@ -475,20 +525,6 @@ function populateNavAvatar(role) {
     if (DOM.studentUserPill)   DOM.studentUserPill.style.display = '';
   }
 }
-
-// ─── Logout ──────────────────────────────────────
-DOM.lecturerLogout.addEventListener('click', () => {
-  confirmModal('Sign out?', 'This will end any active session and sign you out of Google.', () => {
-    endSession(true);
-    bleStopBeacon();
-    googleSignOut();
-  });
-});
-DOM.studentLogout.addEventListener('click', () => {
-  stopScanner();
-  sheetsStopPolling();
-  googleSignOut();
-});
 
 function googleSignOut() {
   const email = STATE.googleProfile?.email;
@@ -561,8 +597,6 @@ function applyTheme(theme) {
   DOM.themeIconLight.style.display = isDark ? 'none'  : 'block';
 }
 function toggleTheme() { applyTheme(STATE.theme === 'dark' ? 'light' : 'dark'); }
-DOM.themeToggle.addEventListener('click', toggleTheme);
-DOM.themeToggleStudent.addEventListener('click', toggleTheme);
 
 // ═══════════════════════════════════════════════════════
 //  NETWORK
@@ -666,26 +700,15 @@ function showScreen(name) {
 // ═══════════════════════════════════════════════════════
 //  SETTINGS
 // ═══════════════════════════════════════════════════════
-DOM.settingGeo.addEventListener('change', () => {
-  DOM.geoRadiusField.classList.toggle('hidden', !DOM.settingGeo.checked);
-});
-
-// ═══════════════════════════════════════════════════════
-//  AUTH
-// ═══════════════════════════════════════════════════════
-let selectedRole = 'lecturer';
-DOM.roleTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    DOM.roleTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    selectedRole = tab.dataset.role;
-    DOM.deviceWarning.classList.add('hidden');
-    updateAuthForm();
+function initSettingsListeners() {
+  DOM.settingGeo.addEventListener('change', () => {
+    DOM.geoRadiusField.classList.toggle('hidden', !DOM.settingGeo.checked);
   });
-});
-DOM.authName.addEventListener('blur', checkDeviceWarningUI);
-DOM.authMatric.addEventListener('blur', checkDeviceWarningUI);
+}
 
+// ═══════════════════════════════════════════════════════
+//  AUTH HELPERS
+// ═══════════════════════════════════════════════════════
 function checkDeviceWarningUI() {
   if (selectedRole !== 'student') return;
   const matric = DOM.authMatric.value.trim();
@@ -694,32 +717,9 @@ function checkDeviceWarningUI() {
   DOM.deviceWarning.classList.toggle('hidden', check.bound !== false);
 }
 
-function updateAuthForm() {
-  if (selectedRole === 'student') {
-    DOM.matricGroup.style.display = '';
-    DOM.courseGroup.style.display = '';
-    DOM.deptGroup.style.display   = 'none';
-    DOM.authName.placeholder      = 'e.g. Chiamaka Obi';
-    DOM.authCourse.placeholder    = 'e.g. CSC 325';
-    DOM.authBtn.textContent       = 'Join as Student';
-  } else {
-    DOM.matricGroup.style.display = 'none';
-    DOM.courseGroup.style.display = '';
-    DOM.deptGroup.style.display   = '';
-    DOM.authName.placeholder      = 'e.g. Dr. Emeka Okafor';
-    DOM.authCourse.placeholder    = 'e.g. CSC 325';
-    DOM.authBtn.textContent       = 'Enter as Lecturer';
-  }
-}
-
 // ═══════════════════════════════════════════════════════
 //  SESSION MANAGEMENT
 // ═══════════════════════════════════════════════════════
-DOM.startSessionBtn.addEventListener('click', startSession);
-DOM.endSessionBtn.addEventListener('click', () => {
-  confirmModal('End Session?', 'Students can no longer check in. Records stay in Sheets.', () => endSession(false));
-});
-
 async function startSession() {
   const course   = DOM.sessionCourse.value.trim();
   const duration = parseInt(DOM.sessionDuration.value) || 60;
@@ -985,8 +985,6 @@ async function toggleBLEBeacon() {
 // ═══════════════════════════════════════════════════════
 //  SPOT CHECKS
 // ═══════════════════════════════════════════════════════
-DOM.triggerSpotCheckBtn.addEventListener('click', triggerSpotCheck);
-
 function triggerSpotCheck() {
   if (!STATE.attendance.length) { showToast('No attendees to check yet', 'error'); return; }
   const eligible = STATE.attendance.filter(r => !r.spotChecked);
@@ -1075,16 +1073,6 @@ function updateStats() {
   DOM.statFlagged.textContent = flagged;
 }
 
-DOM.clearAttendanceBtn.addEventListener('click', () => {
-  confirmModal('Clear Log?', 'Removes records from this view. Sheets data is not deleted.', () => {
-    STATE.attendance = []; renderAttendanceTable(); updateStats(); saveStateSnapshot();
-  });
-});
-
-// ═══════════════════════════════════════════════════════
-//  EXPORT
-// ═══════════════════════════════════════════════════════
-DOM.exportBtn.addEventListener('click', exportExcel);
 function exportExcel() {
   if (!STATE.attendance.length) { showToast('No records to export', 'error'); return; }
   const course  = STATE.session?.course || STATE.attendance[0]?.course || 'Course';
@@ -1120,10 +1108,6 @@ function exportExcel() {
 // ═══════════════════════════════════════════════════════
 //  QR SCANNER (STUDENT)
 // ═══════════════════════════════════════════════════════
-DOM.startScanBtn.addEventListener('click', startScanner);
-DOM.scanAgainBtn.addEventListener('click', resetStudentScan);
-DOM.manualSubmitBtn.addEventListener('click', handleManualCode);
-
 async function startScanner() {
   if (STATE.scanActive) return;
   try {

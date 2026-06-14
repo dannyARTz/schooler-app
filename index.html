@@ -525,7 +525,29 @@
   </div>
 </div>
 
+<!--
+  ══════════════════════════════════════════════════
+  GOOGLE IDENTITY SERVICES + OAUTH2
+  ──────────────────────────────────────────────────
+  Before deploying, replace YOUR_CLIENT_ID below with
+  your OAuth 2.0 Client ID from Google Cloud Console.
 
+  Steps:
+  1. Go to https://console.cloud.google.com
+  2. Create a project (or select existing)
+  3. APIs & Services → Enable:
+       • Google Sheets API
+       • Google Drive API
+  4. APIs & Services → Credentials
+       → Create Credentials → OAuth 2.0 Client ID
+       → Application type: Web application
+       → Add your domain to "Authorized JavaScript origins"
+         (e.g. https://yourdomain.com or http://localhost for dev)
+  5. Copy the Client ID and paste below
+  ══════════════════════════════════════════════════
+-->
+<script>
+  // ← PASTE YOUR GOOGLE OAUTH CLIENT ID HERE
   window.SCHOOLER_CLIENT_ID = '562442725271-5j7108gfkrk1r7g6s9clhmgl31q9gn60.apps.googleusercontent.com';
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
