@@ -1105,3 +1105,23 @@ img, svg { display: block; }
   max-width: 90px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+/* ─── GOOGLE OAUTH BUTTON ────────────────────────── */
+.google-oauth-btn {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  width: 100%; padding: 12px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.95rem; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  transition: all var(--transition);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+}
+.google-oauth-btn:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 2px 12px rgba(26,108,255,0.2);
+  transform: translateY(-1px);
+}
+.google-oauth-btn:active { transform: translateY(0); }

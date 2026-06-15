@@ -287,7 +287,7 @@ function initEventListeners() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  GOOGLE SSO  (Google Identity Services)
+//  GOOGLE SSO  — single OAuth2 prompt, no double verify
 // ═══════════════════════════════════════════════════════
 
 let selectedRole = 'lecturer';
@@ -295,102 +295,95 @@ let selectedRole = 'lecturer';
 function initGoogleSSO() {
   const clientId = window.SCHOOLER_CLIENT_ID;
 
-  // Check if GIS loaded
   if (typeof google === 'undefined' || !google.accounts) {
-    // GIS script hasn't loaded (offline / blocked)
     DOM.ssoFallbackBtn.style.display = '';
-    DOM.googleSignInBtn.innerHTML = `
-      <div class="sso-loading">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Google Sign-In unavailable — use fallback below
-      </div>`;
+    DOM.googleSignInBtn.innerHTML = `<div class="sso-loading">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Google Sign-In unavailable — use fallback below</div>`;
     return;
   }
 
   if (!clientId || clientId === 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
-    // Dev mode — no real client ID yet
-    DOM.googleSignInBtn.innerHTML = '';
-    renderDevModeSignIn();
-    return;
+    renderDevModeSignIn(); return;
   }
 
-  // Initialize GIS token client for OAuth2 (Sheets + Drive scopes)
+  // ── SINGLE FLOW: token client only ──────────────
+  // We request an OAuth2 access token. From that token we call
+  // the userinfo endpoint to get name/email/picture.
+  // No separate google.accounts.id flow — zero double prompts.
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file email profile',
+    scope: [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive.file',
+      'openid', 'email', 'profile',
+    ].join(' '),
     callback: handleOAuthToken,
+    error_callback: (err) => showSSOError(`Sign-in error: ${err.type || err}`),
   });
 
-  // Render the Google Sign-In button (ID token for profile info)
-  google.accounts.id.initialize({
-    client_id: clientId,
-    callback:  handleGoogleCredential,
-    auto_select: false,
-  });
-
-  google.accounts.id.renderButton(DOM.googleSignInBtn, {
-    type:  'standard',
-    theme: STATE.theme === 'dark' ? 'filled_black' : 'outline',
-    size:  'large',
-    text:  'continue_with',
-    width: 320,
-  });
-
-  // Store tokenClient for later use (requesting OAuth token after ID token)
   window._schoolerTokenClient = tokenClient;
+
+  // Render a single styled button that triggers the token flow
+  DOM.googleSignInBtn.innerHTML = `
+    <button class="google-oauth-btn" id="googleOAuthBtn">
+      <svg width="20" height="20" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        <path fill="none" d="M0 0h48v48H0z"/>
+      </svg>
+      Continue with Google
+    </button>`;
+
+  document.getElementById('googleOAuthBtn').addEventListener('click', () => {
+    // prompt:'select_account' lets the user pick which Google account
+    // without showing a second consent screen after the first sign-in
+    window._schoolerTokenClient.requestAccessToken({ prompt: 'select_account' });
+  });
 }
 
-// Step 1: Google returns an ID token (profile info)
-function handleGoogleCredential(response) {
-  try {
-    // Decode JWT payload (no signature verification needed client-side)
-    const parts   = response.credential.split('.');
-    const payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
-
-    STATE.googleProfile = {
-      name:    payload.name,
-      email:   payload.email,
-      picture: payload.picture,
-      sub:     payload.sub,
-    };
-
-    // Step 2: Request OAuth2 access token for Sheets API
-    if (window._schoolerTokenClient) {
-      window._schoolerTokenClient.requestAccessToken({ prompt: '' });
-    } else {
-      // No token client (shouldn't happen) — proceed with profile only
-      handlePostGoogle();
-    }
-  } catch(e) {
-    showSSOError('Could not read your Google profile. Please try again.');
-  }
-}
-
-// Step 2: OAuth2 access token received — now we can use Sheets API
+// Called once — with access token in hand
 async function handleOAuthToken(tokenResponse) {
   if (tokenResponse.error) {
-    showSSOError(`Authorisation failed: ${tokenResponse.error}`);
+    showSSOError(`Authorisation failed: ${tokenResponse.error_description || tokenResponse.error}`);
     return;
   }
 
-  sheetsSetToken(tokenResponse.access_token);
-  sheetsSetEmail(STATE.googleProfile.email);
+  const token = tokenResponse.access_token;
+  sheetsSetToken(token);
 
-  // If lecturer — bootstrap their sheet now
+  // Fetch profile from Google userinfo (uses same token — no second prompt)
+  let profile;
+  try {
+    profile = await sheetsFetchUserInfo(token);
+  } catch(e) {
+    showSSOError('Could not read your Google profile. Please try again.');
+    return;
+  }
+
+  STATE.googleProfile = {
+    name:    profile.name,
+    email:   profile.email,
+    picture: profile.picture,
+    sub:     profile.sub,
+  };
+  sheetsSetEmail(profile.email);
+
+  // Lecturer: bootstrap their sheet immediately
   if (selectedRole === 'lecturer') {
-    showToast('Setting up your attendance sheet…', 'info');
+    showToast('Connecting to your attendance sheet…', 'info');
     try {
-      const result = await sheetsBootstrap(STATE.googleProfile.email);
+      const result = await sheetsBootstrap(profile.email);
       STATE.sheetsReady = true;
-      if (result.isNew) showToast('New attendance sheet created in your Drive', 'success');
-      else              showToast('Connected to your existing SCHOOLER sheet', 'success');
+      showToast(result.isNew ? 'Attendance sheet created in your Drive ✓' : 'Connected to your SCHOOLER sheet ✓', 'success');
     } catch(e) {
-      showToast('Sheet setup failed — continuing offline', 'info');
+      showToast(`Sheet setup failed: ${e.message} — running offline`, 'info');
     }
   } else {
-    // Students just need the token; sheet ID comes from the QR payload
+    // Students: token stored, sheet ID will come from QR payload
     STATE.sheetsReady = true;
-    sheetsSetEmail(STATE.googleProfile.email);
   }
 
   handlePostGoogle();
@@ -637,15 +630,42 @@ async function syncOfflineQueue() {
 //  DEVICE FINGERPRINT / DAILY BINDING
 // ═══════════════════════════════════════════════════════
 function initDeviceId() {
-  let id = localStorage.getItem('schooler_device_id');
+  // Try to get from multiple storage locations for persistence
+  // even when localStorage is cleared
+  let id = localStorage.getItem('schooler_device_id')
+        || sessionStorage.getItem('schooler_device_id_bk');
+
   if (!id) {
-    id = generateId(24) + '_' + (navigator.platform || 'web').replace(/\s/g,'').slice(0,6);
-    localStorage.setItem('schooler_device_id', id);
+    // Generate a stable fingerprint from available browser signals
+    const fp = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      screen.colorDepth,
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+      navigator.hardwareConcurrency || '',
+    ].join('|');
+
+    // Hash the fingerprint to a short ID
+    let hash = 0;
+    for (let i = 0; i < fp.length; i++) {
+      hash = ((hash << 5) - hash) + fp.charCodeAt(i);
+      hash |= 0;
+    }
+    const fpPart = Math.abs(hash).toString(36).toUpperCase().padStart(6,'0');
+    id = generateId(16) + '_' + fpPart;
   }
+
   STATE.deviceId = id;
+  // Store in both places — if localStorage is wiped, fingerprint helps regenerate a stable-ish ID
+  localStorage.setItem('schooler_device_id', id);
+  sessionStorage.setItem('schooler_device_id_bk', id);
 }
 function getDeviceShort() {
-  return STATE.deviceId ? STATE.deviceId.slice(0, 8).toUpperCase() : 'UNKNOWN';
+  // Return the fingerprint suffix for display, but use full ID for dedup
+  if (!STATE.deviceId) return 'UNKNOWN';
+  const parts = STATE.deviceId.split('_');
+  return parts[parts.length - 1] || STATE.deviceId.slice(0, 8).toUpperCase();
 }
 
 /**
@@ -840,12 +860,13 @@ async function generateNewQR() {
 
   const s = STATE.session;
   const payload = JSON.stringify({
-    sid: s.id, tok: token, exp: expiry,
-    crs: s.course, pin: s.pin, date: s.date,
-    lat: s.lat, lng: s.lng,
-    geo: s.settings.geo, rad: s.settings.geoRadius,
-    dev: s.settings.device, slf: s.settings.selfie,
-    ble: s.settings.ble, v: APP_VERSION,
+    sid:  s.id, tok: token, exp: expiry,
+    crs:  s.course, pin: s.pin, date: s.date,
+    lat:  s.lat, lng: s.lng,
+    geo:  s.settings.geo, rad: s.settings.geoRadius,
+    dev:  s.settings.device, slf: s.settings.selfie,
+    ble:  s.settings.ble, v: APP_VERSION,
+    shid: sheetsGetUrl() || '',  // ← spreadsheetId for student writes
   });
 
   DOM.qrSessionCode.textContent = s.id.slice(0, 8).toUpperCase();
@@ -878,6 +899,7 @@ async function endSession(silent) {
   clearInterval(STATE.qrInterval);
   clearInterval(STATE.sessionTimer);
   STATE.qrInterval = STATE.sessionTimer = null;
+  sheetsStopAttendancePoll();
 
   if (STATE.session) {
     await pushToSheets('updateSessionStatus', { sessionId: STATE.session.id, status: 'ended' });
@@ -900,37 +922,29 @@ async function endSession(silent) {
 
 // ═══════════════════════════════════════════════════════
 //  SHEETS ATTENDANCE POLLING (LECTURER SIDE)
-//  — picks up check-ins submitted from student devices
 // ═══════════════════════════════════════════════════════
-let sheetsPollLecturerInterval = null;
-
 function startSheetsAttendancePoll() {
-  if (!sheetsGetUrl()) return;
-  clearInterval(sheetsPollLecturerInterval);
-  sheetsPollLecturerInterval = setInterval(async () => {
-    if (!STATE.session || !STATE.isOnline) return;
-    try {
-      const result = await sheetsReadAttendance(STATE.session.id);
-      if (!result || !Array.isArray(result.rows)) return;
-      let newCount = 0;
-      result.rows.forEach(row => {
-        const record = {
-          name:      row.studentName, matric: row.matric,
-          course:    row.course, timestamp: new Date(row.checkInTime + ' ' + row.date).getTime() || Date.now(),
-          date:      row.date, distance: row.distance || null,
-          deviceId:  row.deviceId, sessionId: STATE.session.id,
-          flagged: false, spotChecked: false, spotResult: null,
-          bleVerified: row.bleVerified || false,
-          source: 'sheets',
-        };
-        const added = addAttendanceRecord(record, true); // silent
-        if (added) newCount++;
-      });
-      if (newCount > 0) {
-        showToast(`${newCount} new check-in${newCount > 1 ? 's' : ''} from Sheets`, 'success');
-      }
-    } catch(e) {}
-  }, 5000); // every 5s
+  if (!sheetsIsReady()) return;
+  sheetsStartAttendancePoll(STATE.session.id, (row) => {
+    // Convert Sheets row → attendance record
+    const ts = row.checkInISO ? new Date(row.checkInISO).getTime() : Date.now();
+    const record = {
+      name:        row.studentName,
+      matric:      row.matric,
+      course:      row.course,
+      googleEmail: row.googleEmail || '',
+      timestamp:   ts,
+      date:        row.date,
+      distance:    row.distance ? Number(row.distance) : null,
+      deviceId:    row.deviceId,
+      sessionId:   STATE.session?.id || '',
+      flagged:     false, spotChecked: false, spotResult: null,
+      bleVerified: row.bleVerified || false,
+      source:      'sheets',
+    };
+    const added = addAttendanceRecord(record);
+    if (added) showToast(`${row.studentName} checked in`, 'success');
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1150,33 +1164,56 @@ function stopScanner() {
 
 async function handleQRData(raw) {
   let payload;
-  try { payload = JSON.parse(raw); } catch(e) { showStudentError('Invalid QR Code', 'This QR code is not from SCHOOLER.'); return; }
-  if (!payload.sid || !payload.tok || !payload.exp) { showStudentError('Invalid QR Code', 'QR data is malformed.'); return; }
+  try { payload = JSON.parse(raw); } catch(e) {
+    showStudentError('Invalid QR Code', 'This QR code is not from SCHOOLER.'); return;
+  }
+  if (!payload.sid || !payload.tok || !payload.exp) {
+    showStudentError('Invalid QR Code', 'QR data is malformed.'); return;
+  }
 
-  // Expiry check
+  // ── Expiry check
   if (Date.now() > payload.exp) {
     showStudentError('QR Code Expired', 'This QR has expired — they refresh every 10 seconds. Wait for the next one.'); return;
   }
 
-  // Date check — session must be from today
+  // ── Date check
   if (payload.date && payload.date !== todayKey()) {
     showStudentError('Wrong Day', `This QR is from ${payload.date}. Today's sessions only.`); return;
   }
 
-  // Device-seen-today check (per session per day)
-  if (payload.dev) {
-    if (hasSeenTodayForSession(STATE.user.matric, payload.sid)) {
-      // Don't block — just inform. New day = new session = fresh start.
-      showStudentInfo(
-        'Already Recorded',
-        'This device has already submitted attendance for this session. If you are using a shared device, please note: each student should use their own device. Your first scan has been recorded.',
-        payload
-      );
-      return;
-    }
+  // ── DEVICE DUPLICATE CHECK (local, instant — before any network call)
+  //    Keyed by deviceId + sessionId so same phone can never submit twice
+  //    even if cookies cleared or different Google account used
+  const deviceKey = `schooler_dev_scan_${STATE.deviceId}_${payload.sid}_${todayKey()}`;
+  if (localStorage.getItem(deviceKey)) {
+    showStudentInfo(
+      'Already Recorded',
+      'This device has already submitted attendance for this session today. Each student must use their own device. Your first scan was recorded.',
+      payload
+    );
+    return;
   }
 
-  // BLE proximity check
+  // ── MATRIC DUPLICATE CHECK (local)
+  if (hasSeenTodayForSession(STATE.user?.matric, payload.sid)) {
+    showStudentInfo(
+      'Already Recorded',
+      'You have already marked attendance for this session. If you used a different device earlier, your first scan was recorded.',
+      payload
+    );
+    return;
+  }
+
+  // ── Extract spreadsheetId from QR payload so student can write to the RIGHT sheet
+  if (payload.shid) {
+    sheetsSetSpreadsheetId(payload.shid);
+  } else if (STATE.liveSheetToken?.spreadsheetId) {
+    sheetsSetSpreadsheetId(STATE.liveSheetToken.spreadsheetId);
+  }
+  // If still no sheet ID, we'll queue offline
+  const hasSheetId = !!sheetsGetUrl();
+
+  // ── BLE check
   let bleVerified = false;
   if (payload.ble) {
     showToast('Checking Bluetooth proximity…', 'info');
@@ -1186,62 +1223,83 @@ async function handleQRData(raw) {
     }
     bleVerified = bleResult.verified;
     if (!bleResult.verified && bleResult.fallback) {
-      showToast('Bluetooth scan failed — continuing with QR only', 'info');
+      showToast('Bluetooth unavailable — continuing with QR only', 'info');
     }
   }
 
-  // Geo check
+  // ── Geo check
   let distRounded = null;
   if (payload.geo && payload.lat && payload.lng) {
     showToast('Verifying location…', 'info');
     let coords;
     try { coords = await getGeolocation(); }
     catch(e) { showStudentError('Location Required', 'Enable location services to mark attendance.'); return; }
-    if (coords.accuracy > 150) { showStudentError('Weak GPS', `GPS accuracy is ${Math.round(coords.accuracy)}m. Move closer to a window.`); return; }
+    if (coords.accuracy > 150) {
+      showStudentError('Weak GPS', `GPS accuracy is ${Math.round(coords.accuracy)}m. Move to a clearer area.`); return;
+    }
     const dist = haversineDistance(coords.latitude, coords.longitude, payload.lat, payload.lng);
     distRounded = Math.round(dist);
-    if (dist > (payload.rad || 50)) { showStudentError('Too Far Away', `You are ${distRounded}m away. Must be within ${payload.rad||50}m.`); return; }
+    if (dist > (payload.rad || 50)) {
+      showStudentError('Too Far Away', `You are ${distRounded}m from the classroom. Must be within ${payload.rad||50}m.`); return;
+    }
   }
 
-  // Build record
+  // ── Build record
   const record = {
-    name: STATE.user.name, matric: STATE.user.matric || '',
-    course: payload.crs, timestamp: Date.now(),
-    date: todayKey(), distance: distRounded,
-    sessionId: payload.sid, deviceId: getDeviceShort(),
-    flagged: false, spotChecked: false, spotResult: null,
+    name:        STATE.user.name,
+    matric:      STATE.user.matric || '',
+    googleEmail: STATE.user.googleEmail || STATE.googleProfile?.email || '',
+    course:      payload.crs,
+    timestamp:   Date.now(),
+    date:        todayKey(),
+    distance:    distRounded,
+    sessionId:   payload.sid,
+    deviceId:    STATE.deviceId, // full device ID for server-side dedup
+    flagged:     false, spotChecked: false, spotResult: null,
     bleVerified,
   };
 
-  // Selfie flow
+  // ── Selfie
   if (payload.slf) {
-    try {
-      await captureSelfie();
-    } catch(e) {
-      // Selfie failed or cancelled — lecturer overrides, attendance still submitted
-      showToast('Selfie skipped — attendance submitted without photo', 'info');
-    }
+    try { await captureSelfie(); }
+    catch(e) { showToast('Selfie skipped — attendance submitted', 'info'); }
   }
 
-  // Mark device seen today for this session
+  // ── Mark seen BEFORE submitting (prevent race condition double-tap)
+  localStorage.setItem(deviceKey, '1');
   if (payload.dev) markSeenTodayForSession(STATE.user.matric, payload.sid);
 
-  // Submit
-  if (!STATE.isOnline) {
+  // ── Submit to Sheets (or queue offline)
+  let offlineQueued = false;
+  if (!STATE.isOnline || !STATE.sheetsReady || !hasSheetId) {
     queueOfflineRecord(record);
-    record.offlineQueued = true;
+    offlineQueued = true;
   } else {
     try {
-      await sheetsAppendAttendance(record);
+      const result = await sheetsAppendAttendance(record);
+      if (result.duplicate) {
+        // Sheets confirmed duplicate — still show success (first scan counted)
+        showStudentInfo('Already Recorded', 'This device was already recorded in Sheets. Your first scan counted.', payload);
+        return;
+      }
     } catch(e) {
+      // Sheets write failed — queue offline and continue
       queueOfflineRecord(record);
-      record.offlineQueued = true;
+      offlineQueued = true;
     }
+    // Also broadcast for same-device/same-LAN fallback
     broadcastAttendance(record);
     relayAttendance(record);
   }
 
-  STATE.studentHistory.unshift({ course: payload.crs, date: todayKey(), timestamp: record.timestamp, status: STATE.isOnline ? 'present' : 'offline', bleVerified });
+  record.offlineQueued = offlineQueued;
+
+  STATE.studentHistory.unshift({
+    course: payload.crs, date: todayKey(),
+    timestamp: record.timestamp,
+    status: offlineQueued ? 'offline' : 'present',
+    bleVerified,
+  });
   renderStudentHistory();
   saveStateSnapshot();
   showStudentSuccess(record, distRounded, bleVerified);
@@ -1559,8 +1617,12 @@ function silentReauth() {
 
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file email profile',
-    hint: email,
+    scope: [
+      'https://www.googleapis.com/auth/spreadsheets',
+      'https://www.googleapis.com/auth/drive.file',
+      'openid', 'email', 'profile',
+    ].join(' '),
+    hint: email, // hint skips account picker for known user
     callback: async (tokenResponse) => {
       if (tokenResponse.error) return;
       sheetsSetToken(tokenResponse.access_token);
@@ -1570,13 +1632,16 @@ function silentReauth() {
           await sheetsBootstrap(email);
           STATE.sheetsReady = true;
           updateSheetsStatus();
+          startSheetsAttendancePoll(); // restart lecturer poll after reauth
         } catch(e) {}
       } else {
         STATE.sheetsReady = true;
-        startSheetsPoll();
+        updateSheetsStatus();
+        startSheetsPoll(); // restart student poll after reauth
       }
     },
   });
+  // prompt:'' = silent if user already granted consent, no popup shown
   tokenClient.requestAccessToken({ prompt: '' });
 }
 
