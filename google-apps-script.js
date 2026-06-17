@@ -1,331 +1,296 @@
 /**
- * ══════════════════════════════════════════════════════
- *  SCHOOLER — Google Apps Script Backend  v1.2.0
- *
- *  SETUP INSTRUCTIONS:
- *  ────────────────────────────────────────────────────
- *  1. Go to https://script.google.com
- *  2. Click "New Project"
- *  3. Delete everything in the editor
- *  4. Paste this entire file
- *  5. Click Save (Ctrl+S)
- *  6. Click Deploy → New Deployment
- *  7. Type: Web App
- *  8. Execute as: Me
- *  9. Who has access: Anyone
- * 10. Click Deploy → Authorize → Allow
- * 11. Copy the Web App URL
- * 12. Paste it into SCHOOLER on first launch
- *
- *  SHEETS CREATED AUTOMATICALLY:
- *  ─────────────────────────────
- *  • Sessions    — one row per session
- *  • Attendance  — one row per student check-in
- *  • QR_Live     — single row, updated every 10s
- *  • Audit_Log   — all actions logged
- * ══════════════════════════════════════════════════════
+ * SCHOOLER — Google Apps Script Backend v2.0
+ * ═══════════════════════════════════════════
+ * 
+ * This script runs as YOU (the lecturer) and accepts
+ * requests from anyone — no OAuth needed for students.
+ * 
+ * DEPLOY ONCE:
+ * ────────────
+ * 1. Open https://script.google.com
+ * 2. New project → paste this entire file → Save
+ * 3. Deploy → New Deployment → Web App
+ *    Execute as: Me
+ *    Who has access: Anyone
+ * 4. Authorize → Copy the /exec URL
+ * 5. Paste into SCHOOLER when prompted on first sign-in
+ * 
+ * That's it. Students never need Google accounts.
+ * The script auto-creates your spreadsheet.
  */
 
-// ── Sheet name constants ──────────────────────────────
-const SHEET_SESSIONS   = 'Sessions';
-const SHEET_ATTENDANCE = 'Attendance';
-const SHEET_QR_LIVE    = 'QR_Live';
-const SHEET_AUDIT      = 'Audit_Log';
+// ── Sheet tab names ───────────────────────────────
+const S = {
+  sessions:   'Sessions',
+  attendance: 'Attendance',
+  qrLive:     'QR_Live',
+  log:        'Log',
+};
 
-// ── Entry point — all requests come here ──────────────
+// ── CORS headers ──────────────────────────────────
+function cors() {
+  return ContentService.createTextOutput('')
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Entry point ───────────────────────────────────
 function doPost(e) {
-  const cors = buildCORS();
   try {
     const body   = JSON.parse(e.postData.contents);
     const action = body.action;
     let result;
 
     switch (action) {
-      case 'ping':                result = { ok: true, version: '1.2.0', ts: Date.now() };  break;
-      case 'writeSession':        result = writeSession(body);        break;
-      case 'updateSessionStatus': result = updateSessionStatus(body); break;
-      case 'pushQRToken':         result = pushQRToken(body);         break;
-      case 'pollQRToken':         result = pollQRToken();             break;
-      case 'appendAttendance':    result = appendAttendance(body);    break;
-      case 'readAttendance':      result = readAttendance(body);      break;
-      case 'updateSpotCheck':     result = updateSpotCheck(body);     break;
-      case 'updateBLEBeacon':     result = updateBLEBeacon(body);     break;
-      default:
-        result = { error: `Unknown action: ${action}` };
+      case 'ping':            result = ping();                    break;
+      case 'getSheetId':      result = getSheetId();             break;
+      case 'writeSession':    result = writeSession(body);        break;
+      case 'endSession':      result = endSession(body);          break;
+      case 'pushQRToken':     result = pushQRToken(body);         break;
+      case 'pollQRToken':     result = pollQRToken();             break;
+      case 'submitAttendance':result = submitAttendance(body);    break;
+      case 'getAttendance':   result = getAttendance(body);       break;
+      case 'spotCheck':       result = updateSpotCheck(body);     break;
+      default: result = { ok: false, error: 'Unknown action: ' + action };
     }
 
-    auditLog(action, body.sessionId || '', JSON.stringify(result).slice(0, 200));
-    return buildResponse(result, cors);
+    log_(action, body.sessionId || '', JSON.stringify(result).slice(0, 300));
+    return out(result);
 
-  } catch (err) {
-    auditLog('ERROR', '', err.message);
-    return buildResponse({ error: err.message }, cors);
+  } catch(err) {
+    log_('ERROR', '', err.message);
+    return out({ ok: false, error: err.message });
   }
 }
 
-// Handle preflight OPTIONS (CORS)
-function doGet(e) {
-  return buildResponse({ ok: true, message: 'SCHOOLER API is running' }, buildCORS());
+function doGet() {
+  return out({ ok: true, app: 'SCHOOLER', version: '2.0' });
 }
 
-// ── Sessions ──────────────────────────────────────────
-
-function writeSession(body) {
-  const sheet = getOrCreateSheet(SHEET_SESSIONS, [
-    'SessionID','Date','Course','Lecturer','StartedAt','EndsAt',
-    'Status','QRToken','QRExpiry','Settings','BLEActive','CreatedAt'
-  ]);
-
-  // Check for duplicate
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.sessionId) {
-      // Update existing row status
-      sheet.getRange(i + 1, 8).setValue('');    // clear token
-      sheet.getRange(i + 1, 7).setValue('active');
-      return { ok: true, updated: true };
-    }
-  }
-
-  sheet.appendRow([
-    body.sessionId, body.date, body.course, body.lecturer,
-    body.startedAt, body.endsAt, 'active',
-    '', '', body.settings || '', false,
-    new Date().toISOString()
-  ]);
-  return { ok: true, created: true };
+// ── ping ──────────────────────────────────────────
+function ping() {
+  const ss = getOrCreateSpreadsheet_();
+  return { ok: true, spreadsheetId: ss.getId(), version: '2.0' };
 }
 
-function updateSessionStatus(body) {
-  const sheet = getOrCreateSheet(SHEET_SESSIONS);
+// ── getSheetId — lecturer calls after sign-in ─────
+function getSheetId() {
+  const ss = getOrCreateSpreadsheet_();
+  return { ok: true, spreadsheetId: ss.getId() };
+}
+
+// ── writeSession ──────────────────────────────────
+function writeSession(b) {
+  const sheet = tab_(S.sessions);
+  // Avoid duplicate session rows
   const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.sessionId) {
-      sheet.getRange(i + 1, 7).setValue(body.status);
-      // If ending, clear QR_Live
-      if (body.status === 'ended') clearQRLive();
-      return { ok: true };
-    }
+    if (data[i][0] === b.sessionId) return { ok: true, existing: true };
   }
-  return { ok: false, error: 'Session not found' };
+  sheet.appendRow([
+    b.sessionId, b.date, b.course, b.lecturer,
+    b.lecturerEmail || '', b.startedAt, b.endsAt,
+    'active', b.settings || '',
+    new Date().toISOString(),
+  ]);
+  return { ok: true };
 }
 
-// ── QR Live Token ─────────────────────────────────────
+// ── endSession ────────────────────────────────────
+function endSession(b) {
+  const sheet = tab_(S.sessions);
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === b.sessionId) {
+      sheet.getRange(i + 1, 8).setValue('ended');
+      break;
+    }
+  }
+  // Clear QR_Live row 2
+  const ql = tab_(S.qrLive);
+  if (ql.getLastRow() >= 2) ql.getRange(2, 1, 1, 15).clearContent();
+  return { ok: true };
+}
 
-function pushQRToken(body) {
-  const sheet = getOrCreateSheet(SHEET_QR_LIVE, [
-    'SessionID','Token','Expiry','Course','Lat','Lng',
-    'GeoEnabled','GeoRadius','DeviceBinding','Selfie',
-    'BLE','PIN','Date','UpdatedAt'
-  ]);
-
-  // Always overwrite row 2 (single live token row)
-  const row = [
-    body.sessionId, body.token, body.expiry,
-    body.course, body.lat || '', body.lng || '',
-    body.geo ? 'true' : 'false',
-    body.geoRadius || 50,
-    body.device ? 'true' : 'false',
-    body.selfie  ? 'true' : 'false',
-    body.ble     ? 'true' : 'false',
-    body.pin || '',
-    body.date || formatDate(new Date()),
-    new Date().toISOString()
+// ── pushQRToken — overwrites single live row ──────
+function pushQRToken(b) {
+  const sheet = tab_(S.qrLive);
+  const row   = [
+    b.sessionId, b.token, b.expiry, b.course,
+    b.spreadsheetId || '',
+    b.lat || '', b.lng || '',
+    b.geo    ? '1' : '0',
+    b.geoRadius || 50,
+    b.device ? '1' : '0',
+    b.selfie ? '1' : '0',
+    b.ble    ? '1' : '0',
+    b.pin    || '',
+    b.date   || '',
+    new Date().toISOString(),
   ];
-
   if (sheet.getLastRow() < 2) {
     sheet.appendRow(row);
   } else {
     sheet.getRange(2, 1, 1, row.length).setValues([row]);
   }
-
-  // Also update the Sessions sheet with current token
-  const sessSheet = getOrCreateSheet(SHEET_SESSIONS);
-  const data = sessSheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.sessionId) {
-      sessSheet.getRange(i + 1, 8).setValue(body.token);
-      sessSheet.getRange(i + 1, 9).setValue(body.expiry);
-      break;
-    }
-  }
-
   return { ok: true };
 }
 
+// ── pollQRToken — students call every 3s ──────────
 function pollQRToken() {
-  const sheet = getOrCreateSheet(SHEET_QR_LIVE);
-  if (sheet.getLastRow() < 2) return { token: null };
+  const sheet = tab_(S.qrLive);
+  if (sheet.getLastRow() < 2) return { ok: true, token: null };
 
-  const row     = sheet.getRange(2, 1, 1, 14).getValues()[0];
-  const expiry  = Number(row[2]);
+  const r      = sheet.getRange(2, 1, 1, 15).getValues()[0];
+  const expiry = Number(r[2]);
 
-  // Return null if token is expired
-  if (expiry && Date.now() > expiry + 5000) {
-    return { token: null, expired: true };
-  }
+  if (!r[0] || !r[1]) return { ok: true, token: null };
+  if (expiry && Date.now() > expiry + 5000) return { ok: true, token: null, expired: true };
 
   return {
-    sessionId:  row[0],
-    token:      row[1],
-    expiry:     expiry,
-    course:     row[3],
-    lat:        row[4] || null,
-    lng:        row[5] || null,
-    geo:        row[6] === 'true',
-    geoRadius:  Number(row[7]) || 50,
-    device:     row[8] === 'true',
-    selfie:     row[9] === 'true',
-    ble:        row[10] === 'true',
-    pin:        row[11],
-    date:       row[12],
-    updatedAt:  row[13],
+    ok: true,
+    sessionId:     String(r[0]),
+    token:         String(r[1]),
+    expiry:        expiry,
+    course:        String(r[3]),
+    spreadsheetId: String(r[4]),
+    lat:           r[5] ? Number(r[5]) : null,
+    lng:           r[6] ? Number(r[6]) : null,
+    geo:           r[7] === '1',
+    geoRadius:     Number(r[8]) || 50,
+    device:        r[9] === '1',
+    selfie:        r[10] === '1',
+    ble:           r[11] === '1',
+    pin:           String(r[12]),
+    date:          String(r[13]),
   };
 }
 
-function clearQRLive() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_QR_LIVE);
-    if (sheet && sheet.getLastRow() >= 2) {
-      sheet.getRange(2, 1, 1, 14).clearContent();
-    }
-  } catch(e) {}
-}
+// ── submitAttendance — student submits check-in ───
+function submitAttendance(b) {
+  const sheet = tab_(S.attendance);
+  const data  = sheet.getDataRange().getValues();
 
-// ── Attendance ────────────────────────────────────────
-
-function appendAttendance(body) {
-  const sheet = getOrCreateSheet(SHEET_ATTENDANCE, [
-    'SessionID','Date','Course','StudentName','Matric',
-    'CheckInTime','DeviceID','Distance','BLEVerified',
-    'Status','SpotResult','SubmittedAt'
-  ]);
-
-  // Duplicate guard: same matric + same sessionId
-  const data = sheet.getDataRange().getValues();
+  // Duplicate guard: same sessionId + deviceId OR sessionId + matric
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.sessionId && data[i][4] === body.matric) {
-      return { ok: false, duplicate: true, message: 'Already recorded' };
-    }
+    if (data[i][0] !== b.sessionId) continue;
+    if (data[i][6] === b.deviceId)  return { ok: false, duplicate: true, reason: 'device' };
+    if (data[i][5] === b.matric)    return { ok: false, duplicate: true, reason: 'matric' };
   }
 
+  const now = new Date();
   sheet.appendRow([
-    body.sessionId,
-    body.date || formatDate(new Date()),
-    body.course,
-    body.studentName,
-    body.matric,
-    body.checkInTime || new Date().toLocaleTimeString(),
-    body.deviceId,
-    body.distance || '',
-    body.bleVerified ? 'Yes' : 'No',
+    b.sessionId,
+    b.date || Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd-MMM-yyyy'),
+    b.course,
+    b.name,
+    b.googleEmail || '',
+    b.matric,
+    b.deviceId,
+    Utilities.formatDate(now, Session.getScriptTimeZone(), 'HH:mm:ss'),
+    now.toISOString(),
+    b.distance || '',
+    b.bleVerified ? 'Yes' : 'No',
     'present',
     '',
-    new Date().toISOString()
   ]);
-
   return { ok: true };
 }
 
-function readAttendance(body) {
-  const sheet = getOrCreateSheet(SHEET_ATTENDANCE);
-  if (sheet.getLastRow() < 2) return { rows: [] };
+// ── getAttendance — lecturer polls for new rows ───
+function getAttendance(b) {
+  const sheet = tab_(S.attendance);
+  if (sheet.getLastRow() < 2) return { ok: true, rows: [] };
 
   const data = sheet.getDataRange().getValues();
-  const headers = data[0];
   const rows = [];
-
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.sessionId) {
-      const row = {};
-      headers.forEach((h, j) => { row[h.replace(/\s/g,'')] = data[i][j]; });
-      rows.push({
-        sessionId:   data[i][0],
-        date:        data[i][1],
-        course:      data[i][2],
-        studentName: data[i][3],
-        matric:      data[i][4],
-        checkInTime: data[i][5],
-        deviceId:    data[i][6],
-        distance:    data[i][7],
-        bleVerified: data[i][8] === 'Yes',
-        status:      data[i][9],
-        spotResult:  data[i][10],
-      });
-    }
+    if (data[i][0] !== b.sessionId) continue;
+    rows.push({
+      sessionId:   String(data[i][0]),
+      date:        String(data[i][1]),
+      course:      String(data[i][2]),
+      studentName: String(data[i][3]),
+      googleEmail: String(data[i][4]),
+      matric:      String(data[i][5]),
+      deviceId:    String(data[i][6]),
+      checkInTime: String(data[i][7]),
+      checkInISO:  String(data[i][8]),
+      distance:    data[i][9] ? Number(data[i][9]) : null,
+      bleVerified: data[i][10] === 'Yes',
+      status:      String(data[i][11] || 'present'),
+      spotResult:  String(data[i][12] || ''),
+    });
   }
-  return { rows };
+  return { ok: true, rows };
 }
 
-function updateSpotCheck(body) {
-  const sheet = getOrCreateSheet(SHEET_ATTENDANCE);
+// ── updateSpotCheck ───────────────────────────────
+function updateSpotCheck(b) {
+  const sheet = tab_(S.attendance);
   const data  = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.sessionId && data[i][4] === body.matric) {
-      sheet.getRange(i + 1, 11).setValue(body.result);
-      if (body.result === 'absent') {
-        sheet.getRange(i + 1, 10).setValue('flagged');
-      }
+    if (data[i][0] === b.sessionId && data[i][5] === b.matric) {
+      sheet.getRange(i + 1, 13).setValue(b.result);
+      if (b.result === 'absent') sheet.getRange(i + 1, 12).setValue('flagged');
       return { ok: true };
     }
   }
   return { ok: false, error: 'Record not found' };
 }
 
-function updateBLEBeacon(body) {
-  const sheet = getOrCreateSheet(SHEET_SESSIONS);
-  const data  = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === body.sessionId) {
-      sheet.getRange(i + 1, 11).setValue(body.bleActive ? 'true' : 'false');
-      return { ok: true };
-    }
+// ── Spreadsheet bootstrap ─────────────────────────
+function getOrCreateSpreadsheet_() {
+  const key  = 'SCHOOLER_SPREADSHEET_ID';
+  const prop = PropertiesService.getScriptProperties();
+  let   id   = prop.getProperty(key);
+
+  if (id) {
+    try { return SpreadsheetApp.openById(id); } catch(e) { prop.deleteProperty(key); }
   }
-  return { ok: false };
+
+  // Create new spreadsheet
+  const ss = SpreadsheetApp.create('SCHOOLER Attendance');
+  id = ss.getId();
+  prop.setProperty(key, id);
+
+  // Rename the default sheet and add the rest
+  const sheets = ss.getSheets();
+  sheets[0].setName(S.sessions);
+  ss.insertSheet(S.attendance);
+  ss.insertSheet(S.qrLive);
+  ss.insertSheet(S.log);
+
+  // Write headers
+  const hdrs = {
+    [S.sessions]:   ['SessionID','Date','Course','Lecturer','LecturerEmail','StartedAt','EndsAt','Status','Settings','CreatedAt'],
+    [S.attendance]: ['SessionID','Date','Course','StudentName','StudentEmail','Matric','DeviceID','CheckInTime','CheckInISO','Distance','BLEVerified','Status','SpotResult'],
+    [S.qrLive]:     ['SessionID','Token','Expiry','Course','SpreadsheetID','Lat','Lng','Geo','GeoRadius','Device','Selfie','BLE','PIN','Date','UpdatedAt'],
+    [S.log]:        ['Timestamp','Action','SessionID','Detail'],
+  };
+  Object.entries(hdrs).forEach(([name, hdr]) => {
+    const s = ss.getSheetByName(name);
+    s.getRange(1, 1, 1, hdr.length).setValues([hdr])
+      .setBackground('#1a6cff').setFontColor('#ffffff').setFontWeight('bold');
+    s.setFrozenRows(1);
+  });
+
+  return ss;
 }
 
-// ── Audit Log ─────────────────────────────────────────
-
-function auditLog(action, sessionId, detail) {
-  try {
-    const sheet = getOrCreateSheet(SHEET_AUDIT, ['Timestamp','Action','SessionID','Detail']);
-    sheet.appendRow([new Date().toISOString(), action, sessionId, detail]);
-  } catch(e) {}
-}
-
-// ── Utility helpers ───────────────────────────────────
-
-function getOrCreateSheet(name, headers) {
-  const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  let   sheet = ss.getSheetByName(name);
-
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
-    if (headers) {
-      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-      sheet.getRange(1, 1, 1, headers.length)
-        .setBackground('#1a6cff')
-        .setFontColor('#ffffff')
-        .setFontWeight('bold');
-      sheet.setFrozenRows(1);
-    }
-  }
+function tab_(name) {
+  const ss    = getOrCreateSpreadsheet_();
+  const sheet = ss.getSheetByName(name);
+  if (!sheet) throw new Error('Sheet tab not found: ' + name);
   return sheet;
 }
 
-function formatDate(date) {
-  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd-MMM-yyyy');
+function log_(action, sessionId, detail) {
+  try {
+    tab_(S.log).appendRow([new Date().toISOString(), action, sessionId, detail]);
+  } catch(e) {}
 }
 
-function buildResponse(data, cors) {
-  const output = ContentService
-    .createTextOutput(JSON.stringify(data))
+function out(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
-  return output;
-}
-
-function buildCORS() {
-  // Apps Script doesn't support custom CORS headers in ContentService
-  // but the fetch from the app uses text/plain to avoid preflight.
-  return {};
 }

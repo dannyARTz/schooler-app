@@ -1,153 +1,161 @@
-# SCHOOLER v1.3.0 — Setup Guide
+# SCHOOLER v2.0 — Setup Guide
 
-## What changed from v1.2
+## The architecture (read this first)
 
-| v1.2 | v1.3 |
-|---|---|
-| Manual Apps Script URL paste | Google SSO — sign in, everything happens automatically |
-| `google-apps-script.js` to deploy separately | No Apps Script needed at all |
-| Sheets connected via URL string | OAuth2 token — your Google account IS the connection |
-| Students needed no Google account | Students sign in with Google — identity verified |
+SCHOOLER has **two separate identity systems** working together:
 
----
-
-## One-time Setup (5 minutes)
-
-### Step 1 — Create a Google Cloud project
-
-1. Go to **https://console.cloud.google.com**
-2. Click the project dropdown → **New Project** → name it "SCHOOLER"
-3. Click **Create**
-
-### Step 2 — Enable the required APIs
-
-In your project, go to **APIs & Services → Library** and enable:
-- **Google Sheets API**
-- **Google Drive API**
-
-### Step 3 — Create OAuth credentials
-
-1. Go to **APIs & Services → Credentials**
-2. Click **Create Credentials → OAuth 2.0 Client ID**
-3. If prompted, configure the OAuth consent screen first:
-   - User type: **External** (or Internal if you have Google Workspace)
-   - App name: SCHOOLER
-   - Add scopes: `spreadsheets`, `drive.file`
-4. Back in Credentials → Create OAuth Client ID:
-   - Application type: **Web application**
-   - Name: SCHOOLER Web
-   - **Authorized JavaScript origins** — add your domain:
-     - For local testing: `http://localhost:8080`
-     - For production: `https://yourdomain.com`
-5. Click **Create** → copy the **Client ID**
-
-### Step 4 — Add your Client ID to SCHOOLER
-
-Open `index.html` and find this line near the bottom:
-
-```javascript
-window.SCHOOLER_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+```
+LECTURER                              STUDENT
+────────                              ───────
+1. Deploys their own Apps Script      1. Signs in with Google
+   (this becomes their database)         → name + email are VERIFIED,
+2. Pastes the script URL into            not typed — can't impersonate
+   SCHOOLER once                         another student
+3. Starts a session → the script      2. Adds matric number + course
+   URL gets embedded in every QR      3. Scans the lecturer's QR
+   code, refreshed every 10s             → the QR carries the lecturer's
+                                            script URL to the student
+                                          → student's verified identity
+                                            is POSTed to that URL
+                                          → the SCRIPT (running as the
+                                            lecturer) writes the row
 ```
 
-Replace `YOUR_CLIENT_ID.apps.googleusercontent.com` with your actual Client ID.
-
-### Step 5 — Deploy
-
-Upload all files to any static host:
-- **Netlify** (free): drag the `schooler/` folder to netlify.com/drop
-- **Vercel** (free): `vercel --prod`
-- **GitHub Pages**: push to a repo, enable Pages
-- **Localhost for testing**: `npx serve .`
-
-> HTTPS is required for camera, GPS, Bluetooth, and OAuth to work.
-> Exception: `http://localhost` works for local development.
+**Why this works:** the Apps Script runs with the *lecturer's* Google
+permissions, no matter who calls it. A student's browser never touches
+the lecturer's Sheet directly — it just sends data to a URL, and the
+script (already authorized by the lecturer) does the writing. This is
+why sync actually works now: there's no cross-account permission wall.
 
 ---
 
-## How it works after setup
+## Part A — Lecturer setup (5 minutes, once)
 
-### Lecturer flow (zero friction)
-1. Open SCHOOLER → click **"I'm a Lecturer"** → click **Continue with Google**
-2. Sign in with your university Google account
-3. SCHOOLER automatically creates a Google Sheet called **"SCHOOLER Attendance — your@email.com"** in your Drive
-4. Start a session — QR tokens write to your Sheet every 10 seconds
-5. Students' check-ins appear live in the dashboard (polled every 5 seconds from your Sheet)
-6. Export to Excel any time
+### 1. Create the Apps Script
 
-### Student flow
-1. Open SCHOOLER → click **"I'm a Student"** → click **Continue with Google**
-2. Sign in with their own Google account — this verifies identity
-3. Enter matric number + course code once
-4. Scan the lecturer's QR — their attendance is written to the **lecturer's** Sheet
+1. Go to **https://script.google.com**
+2. **New project**
+3. Delete the default code
+4. Open `google-apps-script.js` from this zip — copy all of it
+5. Paste into the editor → **Save** (Ctrl/Cmd+S)
 
-**The anti-fraud benefit:** A student trying to mark attendance for someone else would need to log into the other student's Google account on their phone — which requires their Google password and 2FA. That's a much higher barrier than just sharing a code.
+### 2. Deploy it
 
----
+1. **Deploy → New deployment**
+2. Type: **Web app**
+3. Execute as: **Me**
+4. Who has access: **Anyone**
+5. **Deploy** → **Authorize access** → pick your Google account → **Allow**
+6. Copy the URL ending in `/exec`
 
-## Sheet structure (auto-created in lecturer's Drive)
+### 3. Connect it to SCHOOLER
 
-### Sessions tab
-| SessionID | Date | Course | Lecturer | LecturerEmail | StartedAt | EndsAt | Status | QRToken | QRExpiry | Settings | BLEActive | CreatedAt |
+1. Open SCHOOLER → **"I'm a Lecturer"**
+2. Type your name
+3. Paste the `/exec` URL into the Apps Script field
+4. **Connect & Enter** — SCHOOLER pings the script to confirm it works
 
-### Attendance tab
-| SessionID | Date | Course | StudentName | StudentEmail | Matric | CheckInTime | DeviceID | Distance | BLEVerified | Status | SpotResult | SubmittedAt |
-
-### QR_Live tab *(single live row — overwrites every 10s)*
-| SessionID | Token | Expiry | Course | Lat | Lng | GeoEnabled | GeoRadius | DeviceBinding | Selfie | BLE | PIN | Date | UpdatedAt | SpreadsheetID |
-
-### Audit_Log tab
-| Timestamp | Action | SessionID | UserEmail | Detail |
+The script auto-creates a spreadsheet called **"SCHOOLER Attendance"**
+in your Drive the first time it runs, with 4 tabs: `Sessions`,
+`Attendance`, `QR_Live`, `Log`.
 
 ---
 
-## What the `StudentEmail` column gives you
+## Part B — Student setup (one-time, optional Google Cloud step for YOU)
 
-Because students sign in with Google, every attendance row now has a verified `StudentEmail`. This means:
+Students sign in with Google to verify their identity. For the
+**Sign in with Google** button to appear, you (the developer deploying
+this app) need a Google OAuth Client ID — this is separate from each
+lecturer's Apps Script.
 
-- You can cross-reference with your university's student email list
-- You can detect if a student registered a fake matric number (their Google email is still there)
-- Spot-checking becomes easier — you can look up who `chiamaka.obi@university.edu` actually is
+### Get a Client ID (you do this once for the whole app)
 
----
+1. **https://console.cloud.google.com** → new or existing project
+2. **APIs & Services → OAuth consent screen** → fill in app name, configure
+3. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+   - Application type: **Web application**
+   - Authorized JavaScript origins: add the domain you deploy SCHOOLER to
+     (e.g. `https://schooler.netlify.app`, or `http://localhost:8080` for testing)
+4. Copy the Client ID
 
-## Token expiry and refresh
+### Paste it into the app
 
-OAuth2 tokens expire after 1 hour. SCHOOLER handles this silently:
-- On page reload, GIS re-issues a token without prompting the user
-- If a token expires mid-session, the next Sheets call catches the 401 and triggers a silent refresh
-- Users never see a sign-in prompt after the first login (as long as they stay signed in to Google)
+Open `index.html`, find:
+```js
+window.SCHOOLER_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+```
+Replace with your real Client ID. Deploy. Done — every student who
+visits your SCHOOLER URL afterward just clicks **Continue with Google**.
 
----
-
-## Offline behaviour
-
-Same as v1.2 — if a student has no internet when they scan:
-- Attendance saved in localStorage
-- Banner shown: *"Your attendance has been saved locally and will sync once internet access is restored."*
-- On reconnect, automatically submitted to the lecturer's Sheet
-
----
-
-## Dev mode (no Client ID)
-
-If you open SCHOOLER without setting a Client ID, it detects this and shows a simple name/email form instead of the Google button. Useful for:
-- UI testing without OAuth setup
-- Offline-only deployments
-- Demos where Google sign-in isn't available
+If you skip this step, SCHOOLER falls back to a simple name-entry box
+(dev mode) so you can still test everything without setting up OAuth.
 
 ---
 
-## Files changed from v1.2 → v1.3
+## Day-to-day flow
 
-| File | What changed |
+**Lecturer:**
+1. Open SCHOOLER (already connected from setup)
+2. Course code + duration → **Start Session**
+3. QR appears, refreshing every 10 seconds
+4. Attendance table fills in live — polled from the Sheet every 4 seconds
+5. **Export Excel** any time, or open the Sheet directly in Drive
+
+**Student:**
+1. Open SCHOOLER → **"I'm a Student"**
+2. **Continue with Google** → picks their account → verified name/email shown
+3. Matric number + course code
+4. **Enter SCHOOLER**
+5. **Start Scanner** → point at the lecturer's QR
+6. Done — appears on the lecturer's dashboard within ~4 seconds
+
+---
+
+## Anti-fraud layers, and why each one is actually enforced now
+
+| Layer | How it's enforced |
 |---|---|
-| `index.html` | Replaced setup modal + auth form → Google SSO screen + completion screen |
-| `js/sheets.js` | Replaced Apps Script calls → direct Sheets API v4 with OAuth token |
-| `js/app.js` | Replaced boot/setup/auth sections → GIS integration, silent reauth, avatar pill |
-| `css/style.css` | Added SSO button, avatar pill, completion screen, dev mode styles |
-| `google-apps-script.js` | **No longer needed** — kept in zip for reference only |
+| **Can't fake a name** | Name comes from the Google Sign-In button's verified token, not a text field |
+| **Can't reuse a device** | Local check runs the instant the QR is decoded — before any network call — keyed to a browser fingerprint that survives `localStorage` clears |
+| **Can't reuse an old QR** | Every code embeds its own expiry timestamp; checked both during decode and again server-side |
+| **Can't submit from home** | Optional geofence checks GPS distance from the lecturer's location at session start |
+| **Can't submit twice in Sheets** | The script checks `sessionId + deviceId` AND `sessionId + matric` before appending any row |
+| **Can't intercept other sessions' data** | Each script only has one spreadsheet — the lecturer's own |
+
+---
+
+## Troubleshooting
+
+**"Could not connect: HTTP 401" or similar, as a lecturer**
+Your deployment access is probably set to "Only myself" instead of
+"Anyone." Redeploy with **Anyone** access.
+
+**Student scans but nothing appears on the lecturer's dashboard**
+Check that the QR hasn't expired (10-second window + scan time) and
+that the student has internet. If offline, their scan is queued
+locally and synced automatically once they reconnect.
+
+**Google Sign-In button doesn't appear for students**
+Either `SCHOOLER_CLIENT_ID` is still the placeholder (dev mode kicks
+in instead — a simple name box appears) or the domain isn't in your
+OAuth Client's **Authorized JavaScript origins** list.
+
+**"This device has already submitted attendance"**
+Working as intended — that device already has a row for this exact
+session. Each student needs to scan from their own device.
+
+---
+
+## Files in this zip
+
+| File | Role |
+|---|---|
+| `google-apps-script.js` | Paste into Apps Script — this IS your backend |
+| `js/sheets.js` | Talks to your deployed Apps Script URL |
+| `js/app.js` | Core app logic, auth, sessions, scanning |
+| `index.html` | UI shell, Google Sign-In button host |
 | `SETUP.md` | This file |
 
 ---
 
-Built by SCHOOLER v1.3.0
+Built by SCHOOLER v2.0

@@ -1125,3 +1125,30 @@ img, svg { display: block; }
   transform: translateY(-1px);
 }
 .google-oauth-btn:active { transform: translateY(0); }
+
+/* ─── AUTH FORM LABEL HINT ───────────────────────── */
+.label-hint {
+  font-size: 0.72rem; color: var(--text-muted);
+  font-weight: 400; letter-spacing: 0;
+}
+
+/* ─── STUDENT SSO VERIFIED CARD ──────────────────── */
+.sso-hint {
+  font-size: 0.8rem; color: var(--text-secondary);
+  line-height: 1.5; margin-bottom: 10px;
+}
+.google-btn-wrap { display: flex; justify-content: center; min-height: 44px; }
+.verified-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.25);
+  border-radius: var(--radius-sm);
+}
+.verified-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 2px solid var(--success);
+  object-fit: cover;
+}
+.verified-name  { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
+.verified-email { font-size: 0.78rem; color: var(--text-secondary); }

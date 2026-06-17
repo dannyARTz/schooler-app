@@ -21,7 +21,7 @@
 const STATE = {
   role: null,
   user: null,
-  googleProfile: null,   // { name, email, picture } from Google ID token
+  googleProfile: null,   // { name, email, picture } — set after Google SSO (students only)
   session: null,
   attendance: [],
   studentHistory: [],
@@ -35,7 +35,7 @@ const STATE = {
   theme: 'dark',
   isOnline: navigator.onLine,
   deviceId: null,
-  sheetsReady: false,    // true once OAuth token + sheet ID are both set
+  sheetsReady: false,    // true once GAS URL is verified and reachable
   lastSheetsPush: null,
   bleBeaconActive: false,
   liveSheetToken: null,
@@ -58,22 +58,10 @@ let DOM = {};   // filled by initDOM() once the page is ready
 function initDOM() {
   DOM = {
     splash:               $('splash'),
-    // SSO screens
     authScreen:           $('authScreen'),
     completionScreen:     $('completionScreen'),
-    googleSignInBtn:      $('googleSignInBtn'),
-    ssoFallbackBtn:       $('ssoFallbackBtn'),
-    ssoError:             $('ssoError'),
-    ssoErrorText:         $('ssoErrorText'),
-    ssoHint:              $('ssoHint'),
-    completionAvatar:     $('completionAvatar'),
-    completionName:       $('completionName'),
-    completionEmail:      $('completionEmail'),
-    completionSubtitle:   $('completionSubtitle'),
-    completionForm:       $('completionForm'),
-    deviceWarning:        $('deviceWarning'),
+    // Auth form
     roleTabs:             document.querySelectorAll('.role-tab'),
-    // Hidden compat inputs (auto-filled from Google profile)
     authName:             $('authName'),
     authMatric:           $('authMatric'),
     authCourse:           $('authCourse'),
@@ -81,6 +69,21 @@ function initDOM() {
     authBtn:              $('authBtn'),
     matricGroup:          $('matricGroup'),
     courseGroup:          $('courseGroup'),
+    gasUrlGroup:          $('gasUrlGroup'),
+    gasUrlInput:          $('gasUrlInput'),
+    gasUrlNote:           $('gasUrlNote'),
+    deviceWarning:        $('deviceWarning'),
+    lecturerNameGroup:    $('lecturerNameGroup'),
+    studentSSOGroup:      $('studentSSOGroup'),
+    googleSignInBtn:      $('googleSignInBtn'),
+    studentVerifiedCard:  $('studentVerifiedCard'),
+    studentVerifiedAvatar:$('studentVerifiedAvatar'),
+    studentVerifiedName:  $('studentVerifiedName'),
+    studentVerifiedEmail: $('studentVerifiedEmail'),
+    studentSwitchAccountBtn: $('studentSwitchAccountBtn'),
+    ssoFallbackBtn:       $('ssoFallbackBtn'),
+    ssoError:             $('ssoError'),
+    ssoErrorText:         $('ssoErrorText'),
     // Sheets sync badge
     sheetsSyncBadge:      $('sheetsSyncBadge'),
     sheetsSyncText:       $('sheetsSyncText'),
@@ -206,224 +209,145 @@ function bootApp() {
   setTimeout(() => {
     DOM.splash.style.display = 'none';
     const saved = loadSavedState();
-    if (saved && saved.googleProfile) {
-      STATE.googleProfile = saved.googleProfile;
+    if (saved && saved.role && saved.user) {
       restoreSession(saved);
     } else {
       showScreen('auth');
-      initGoogleSSO();
     }
   }, 400);
 }
 
 // ═══════════════════════════════════════════════════════
-//  EVENT LISTENERS — all wired here after DOM is ready
+//  EVENT LISTENERS
 // ═══════════════════════════════════════════════════════
 function initEventListeners() {
-  // Theme
   DOM.themeToggle.addEventListener('click', toggleTheme);
   DOM.themeToggleStudent.addEventListener('click', toggleTheme);
-
-  // Settings panel
   initSettingsListeners();
 
-  // SSO role tabs
+  // Role tabs
   DOM.roleTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       DOM.roleTabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       selectedRole = tab.dataset.role;
       DOM.deviceWarning.classList.add('hidden');
-      DOM.ssoHint.innerHTML = selectedRole === 'lecturer'
-        ? 'Your Google account auto-creates your attendance sheet. No setup needed.'
-        : 'Signing in with Google verifies your identity. Each student needs their own Google account.';
+      updateAuthForm();
     });
   });
 
-  // Completion form & fallback
   DOM.authBtn.addEventListener('click', handleAuth);
-  DOM.ssoFallbackBtn.addEventListener('click', () => {
-    STATE.googleProfile = { name: 'Local User', email: 'local@schooler.app', picture: '', sub: generateId(16) };
-    STATE.sheetsReady   = false;
-    DOM.authName.value  = 'Local User';
-    handlePostGoogle();
-    showToast('Running in local-only mode. Attendance will not sync to Sheets.', 'info');
-  });
+  initSwitchAccountListener();
 
   // Logouts
   DOM.lecturerLogout.addEventListener('click', () => {
-    confirmModal('Sign out?', 'This will end any active session and sign you out of Google.', () => {
-      endSession(true); bleStopBeacon(); googleSignOut();
+    confirmModal('Sign out?', 'This will end any active session.', () => {
+      endSession(true); bleStopBeacon();
+      clearSavedState();
+      STATE.role = null; STATE.user = null; STATE.sheetsReady = false;
+      showScreen('auth');
     });
   });
   DOM.studentLogout.addEventListener('click', () => {
-    stopScanner(); sheetsStopPolling(); googleSignOut();
+    stopScanner(); sheetsStopPolling();
+    clearSavedState();
+    STATE.role = null; STATE.user = null;
+    showScreen('auth');
   });
 
   // Session
   DOM.startSessionBtn.addEventListener('click', startSession);
   DOM.endSessionBtn.addEventListener('click', () => {
-    confirmModal('End Session?', 'Students can no longer check in. Records stay in Sheets.', () => endSession(false));
+    confirmModal('End Session?', 'Students can no longer check in.', () => endSession(false));
   });
 
-  // Spot check
   DOM.triggerSpotCheckBtn.addEventListener('click', triggerSpotCheck);
-
-  // Attendance table
   DOM.clearAttendanceBtn.addEventListener('click', () => {
-    confirmModal('Clear Log?', 'Removes records from this view. Sheets data is not deleted.', () => {
+    confirmModal('Clear Log?', 'Removes from this view only — Sheets data kept.', () => {
       STATE.attendance = []; renderAttendanceTable(); updateStats(); saveStateSnapshot();
     });
   });
   DOM.exportBtn.addEventListener('click', exportExcel);
-
-  // Scanner
   DOM.startScanBtn.addEventListener('click', startScanner);
   DOM.scanAgainBtn.addEventListener('click', resetStudentScan);
   DOM.manualSubmitBtn.addEventListener('click', handleManualCode);
-
-  // Modal close
   DOM.modalCancel.addEventListener('click', () => DOM.modal.classList.add('hidden'));
 }
 
 // ═══════════════════════════════════════════════════════
-//  GOOGLE SSO  — single OAuth2 prompt, no double verify
+//  AUTH
+//  Lecturer: types name + pastes Apps Script URL (their
+//            own backend — runs with their permissions)
+//  Student:  signs in with Google (verified identity —
+//            can't type someone else's name), then adds
+//            matric + course. The verified name/email is
+//            sent to the LECTURER's Apps Script, which
+//            writes the row using the lecturer's access.
 // ═══════════════════════════════════════════════════════
-
 let selectedRole = 'lecturer';
 
+function updateAuthForm() {
+  const isStudent = selectedRole === 'student';
+  DOM.lecturerNameGroup.style.display = isStudent ? 'none' : '';
+  DOM.studentSSOGroup.style.display   = isStudent ? '' : 'none';
+  DOM.matricGroup.style.display       = isStudent ? '' : 'none';
+  DOM.courseGroup.style.display       = isStudent ? '' : 'none';
+  DOM.gasUrlGroup.style.display       = isStudent ? 'none' : '';
+  DOM.authBtn.textContent             = isStudent ? 'Enter SCHOOLER' : 'Connect & Enter';
+
+  if (isStudent) initGoogleSSO();
+}
+
+// ─── Google Sign-In (students only) ──────────────
 function initGoogleSSO() {
   const clientId = window.SCHOOLER_CLIENT_ID;
 
   if (typeof google === 'undefined' || !google.accounts) {
     DOM.ssoFallbackBtn.style.display = '';
-    DOM.googleSignInBtn.innerHTML = `<div class="sso-loading">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      Google Sign-In unavailable — use fallback below</div>`;
+    return;
+  }
+  if (!clientId || clientId === 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
+    renderDevModeSignIn();
     return;
   }
 
-  if (!clientId || clientId === 'YOUR_CLIENT_ID.apps.googleusercontent.com') {
-    renderDevModeSignIn(); return;
-  }
-
-  // ── SINGLE FLOW: token client only ──────────────
-  // We request an OAuth2 access token. From that token we call
-  // the userinfo endpoint to get name/email/picture.
-  // No separate google.accounts.id flow — zero double prompts.
-  const tokenClient = google.accounts.oauth2.initTokenClient({
+  google.accounts.id.initialize({
     client_id: clientId,
-    scope: [
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive.file',
-      'openid', 'email', 'profile',
-    ].join(' '),
-    callback: handleOAuthToken,
-    error_callback: (err) => showSSOError(`Sign-in error: ${err.type || err}`),
+    callback:  handleGoogleCredential,
+    auto_select: false,
   });
 
-  window._schoolerTokenClient = tokenClient;
-
-  // Render a single styled button that triggers the token flow
-  DOM.googleSignInBtn.innerHTML = `
-    <button class="google-oauth-btn" id="googleOAuthBtn">
-      <svg width="20" height="20" viewBox="0 0 48 48">
-        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        <path fill="none" d="M0 0h48v48H0z"/>
-      </svg>
-      Continue with Google
-    </button>`;
-
-  document.getElementById('googleOAuthBtn').addEventListener('click', () => {
-    // prompt:'select_account' lets the user pick which Google account
-    // without showing a second consent screen after the first sign-in
-    window._schoolerTokenClient.requestAccessToken({ prompt: 'select_account' });
+  google.accounts.id.renderButton(DOM.googleSignInBtn, {
+    type: 'standard',
+    theme: STATE.theme === 'dark' ? 'filled_black' : 'outline',
+    size: 'large', text: 'continue_with', width: 320,
   });
 }
 
-// Called once — with access token in hand
-async function handleOAuthToken(tokenResponse) {
-  if (tokenResponse.error) {
-    showSSOError(`Authorisation failed: ${tokenResponse.error_description || tokenResponse.error}`);
-    return;
-  }
-
-  const token = tokenResponse.access_token;
-  sheetsSetToken(token);
-
-  // Fetch profile from Google userinfo (uses same token — no second prompt)
-  let profile;
+// Google returns a signed ID token — we decode it client-side just
+// to display the name/email immediately. The token itself isn't
+// re-verified server-side here (Apps Script trusts whatever the
+// client sends), so this is identity *display*, not cryptographic
+// proof to the script. It still stops casual impersonation because
+// the name comes from Google's button, not a free-text field.
+function handleGoogleCredential(response) {
   try {
-    profile = await sheetsFetchUserInfo(token);
+    const parts   = response.credential.split('.');
+    const payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+
+    STATE.googleProfile = {
+      name: payload.name, email: payload.email,
+      picture: payload.picture, sub: payload.sub,
+    };
+
+    DOM.studentVerifiedAvatar.src        = payload.picture || '';
+    DOM.studentVerifiedName.textContent  = payload.name;
+    DOM.studentVerifiedEmail.textContent = payload.email;
+    DOM.googleSignInBtn.style.display    = 'none';
+    DOM.studentVerifiedCard.classList.remove('hidden');
+    DOM.ssoError.classList.add('hidden');
   } catch(e) {
     showSSOError('Could not read your Google profile. Please try again.');
-    return;
-  }
-
-  STATE.googleProfile = {
-    name:    profile.name,
-    email:   profile.email,
-    picture: profile.picture,
-    sub:     profile.sub,
-  };
-  sheetsSetEmail(profile.email);
-
-  // Lecturer: bootstrap their sheet immediately
-  if (selectedRole === 'lecturer') {
-    showToast('Connecting to your attendance sheet…', 'info');
-    try {
-      const result = await sheetsBootstrap(profile.email);
-      STATE.sheetsReady = true;
-      showToast(result.isNew ? 'Attendance sheet created in your Drive ✓' : 'Connected to your SCHOOLER sheet ✓', 'success');
-    } catch(e) {
-      showToast(`Sheet setup failed: ${e.message} — running offline`, 'info');
-    }
-  } else {
-    // Students: token stored, sheet ID will come from QR payload
-    STATE.sheetsReady = true;
-  }
-
-  handlePostGoogle();
-}
-
-// After Google auth is complete — show completion screen or go straight to dashboard
-function handlePostGoogle() {
-  // Show completion screen for profile confirmation + student extra fields
-  DOM.authScreen.classList.add('hidden');
-  DOM.completionScreen.classList.remove('hidden');
-
-  // Populate completion screen with Google profile
-  const p = STATE.googleProfile;
-  if (p) {
-    DOM.completionAvatar.src   = p.picture || '';
-    DOM.completionName.textContent  = p.name  || '';
-    DOM.completionEmail.textContent = p.email || '';
-    // Pre-fill hidden name field
-    DOM.authName.value = p.name || '';
-  }
-
-  if (selectedRole === 'lecturer') {
-    // Lecturers don't need extra fields — just confirm and go
-    DOM.completionSubtitle.textContent = 'Signed in as Lecturer. Click below to open your dashboard.';
-    DOM.matricGroup.style.display  = 'none';
-    DOM.courseGroup.style.display  = 'none';
-    DOM.authBtn.textContent        = 'Open Lecturer Dashboard';
-  } else {
-    // Students need matric + course
-    DOM.completionSubtitle.textContent = 'Almost there — enter your details to mark attendance.';
-    DOM.matricGroup.style.display  = '';
-    DOM.courseGroup.style.display  = '';
-    DOM.authBtn.textContent        = 'Enter SCHOOLER';
-    // Check device binding warning
-    DOM.authMatric.addEventListener('blur', () => {
-      const matric = DOM.authMatric.value.trim();
-      if (!matric) return;
-      const check = checkDeviceBinding(matric);
-      DOM.deviceWarning.classList.toggle('hidden', check.bound !== false);
-    });
   }
 }
 
@@ -432,54 +356,6 @@ function showSSOError(msg) {
   DOM.ssoError.classList.remove('hidden');
 }
 
-function handleAuth() {
-  const name   = (DOM.authName.value || STATE.googleProfile?.name || '').trim();
-  const matric = DOM.authMatric.value.trim();
-  const course = DOM.authCourse.value.trim();
-  const email  = STATE.googleProfile?.email || '';
-
-  if (!name) { showToast('Could not read your name from Google', 'error'); return; }
-
-  if (selectedRole === 'student') {
-    if (!matric) { showToast('Please enter your matric number', 'error'); return; }
-    if (!course) { showToast('Please enter your course code', 'error'); return; }
-    const check = checkDeviceBinding(matric);
-    if (!check.bound) {
-      if (check.daysSince < 30) {
-        showToast(`Device switch pending. Next change in ${Math.ceil(30 - check.daysSince)} days.`, 'error');
-        return;
-      }
-      bindDevice(matric);
-    }
-    if (check.isNewBind) bindDevice(matric);
-  }
-
-  STATE.role = selectedRole;
-  STATE.user = { name, course, dept: '', matric, googleEmail: email };
-  saveStateSnapshot();
-
-  if (STATE.role === 'lecturer') {
-    DOM.sessionCourse.value = '';
-    renderAttendanceTable();
-    updateStats();
-    populateNavAvatar('lecturer');
-    showScreen('lecturer');
-    updateSheetsStatus();
-    showToast(`Welcome, ${name.split(' ')[0]}`, 'success');
-  } else {
-    DOM.studentName.textContent          = name;
-    DOM.studentMatricDisplay.textContent = matric ? `${matric} · ${course}` : course;
-    DOM.deviceChip.title                 = `Device: ${getDeviceShort()}`;
-    populateNavAvatar('student');
-    renderStudentHistory();
-    if (STATE.sheetsReady) startSheetsPoll();
-    showScreen('student');
-    syncOfflineQueue();
-    showToast(`Welcome, ${name.split(' ')[0]}`, 'success');
-  }
-}
-
-// ─── Dev mode (no Client ID configured) ──────────
 function renderDevModeSignIn() {
   DOM.googleSignInBtn.innerHTML = `
     <div class="dev-mode-notice">
@@ -487,52 +363,131 @@ function renderDevModeSignIn() {
       Dev mode — Google Client ID not configured
     </div>
     <div class="dev-sign-in-form">
-      <input type="text"  id="devName"  placeholder="Full name" class="dev-input" />
-      <input type="email" id="devEmail" placeholder="Email (optional)" class="dev-input" />
-      <button class="btn-primary full-width" id="devContinueBtn">Continue as ${selectedRole}</button>
+      <input type="text" id="devName" placeholder="Full name" class="dev-input" />
+      <button class="btn-primary full-width" id="devContinueBtn">Use this name</button>
     </div>`;
-
   document.getElementById('devContinueBtn').addEventListener('click', () => {
-    const name  = document.getElementById('devName').value.trim();
-    const email = document.getElementById('devEmail').value.trim();
-    if (!name) { showToast('Enter your name', 'error'); return; }
-    STATE.googleProfile = { name, email: email || `${name.toLowerCase().replace(/\s/g,'.')}@dev.local`, picture: '', sub: generateId(16) };
-    STATE.sheetsReady   = false; // no real token in dev mode
-    DOM.authName.value  = name;
-    handlePostGoogle();
+    const name = document.getElementById('devName').value.trim();
+    if (!name) { showToast('Enter a name', 'error'); return; }
+    STATE.googleProfile = { name, email: `${name.toLowerCase().replace(/\s/g,'.')}@dev.local`, picture: '', sub: generateId(16) };
+    DOM.studentVerifiedName.textContent  = name;
+    DOM.studentVerifiedEmail.textContent = STATE.googleProfile.email;
+    DOM.googleSignInBtn.style.display    = 'none';
+    DOM.studentVerifiedCard.classList.remove('hidden');
   });
 }
 
-// ─── Populate navbar avatar ───────────────────────
-function populateNavAvatar(role) {
-  const p = STATE.googleProfile;
-  if (!p) return;
-  const firstName = p.name.split(' ')[0];
+function initSwitchAccountListener() {
+  DOM.studentSwitchAccountBtn.addEventListener('click', () => {
+    STATE.googleProfile = null;
+    DOM.studentVerifiedCard.classList.add('hidden');
+    DOM.googleSignInBtn.style.display = '';
+    DOM.googleSignInBtn.innerHTML = '';
+    initGoogleSSO();
+  });
+  DOM.ssoFallbackBtn.addEventListener('click', () => {
+    STATE.googleProfile = { name: 'Local User', email: 'local@schooler.app', picture: '', sub: generateId(16) };
+    DOM.studentVerifiedName.textContent  = 'Local User';
+    DOM.studentVerifiedEmail.textContent = 'local@schooler.app';
+    DOM.studentVerifiedCard.classList.remove('hidden');
+    showToast('Running without Google verification', 'info');
+  });
+}
+
+// ─── Submit ───────────────────────────────────────
+async function handleAuth() {
+  if (selectedRole === 'lecturer') {
+    const name   = DOM.authName.value.trim();
+    const gasUrl = DOM.gasUrlInput.value.trim() || gasGetUrl() || '';
+    if (!name)   { showToast('Please enter your name', 'error'); return; }
+    if (!gasUrl) { showToast('Please paste your Apps Script URL', 'error'); return; }
+
+    DOM.authBtn.textContent = 'Connecting…';
+    DOM.authBtn.disabled    = true;
+    try {
+      gasSetUrl(gasUrl);
+      await gasPing();
+      STATE.sheetsReady = true;
+      DOM.gasUrlNote.style.display = '';
+      showToast('Connected to Google Sheets ✓', 'success');
+    } catch(e) {
+      DOM.authBtn.textContent = 'Connect & Enter';
+      DOM.authBtn.disabled    = false;
+      showToast(`Could not connect: ${e.message}. Check the URL and try again.`, 'error');
+      return;
+    }
+    DOM.authBtn.textContent = 'Connect & Enter';
+    DOM.authBtn.disabled    = false;
+
+    STATE.role = 'lecturer';
+    STATE.user = { name, course: '', matric: '', dept: '', googleEmail: '' };
+    saveStateSnapshot();
+
+    DOM.sessionCourse.value = '';
+    renderAttendanceTable(); updateStats();
+    updateNavName('lecturer', name);
+    showScreen('lecturer');
+    updateSheetsStatus();
+    showToast(`Welcome, ${name.split(' ')[0]}`, 'success');
+    return;
+  }
+
+  // ── Student ──────────────────────────────────────
+  if (!STATE.googleProfile) {
+    showToast('Please sign in with Google first', 'error');
+    return;
+  }
+  const matric = DOM.authMatric.value.trim();
+  const course = DOM.authCourse.value.trim();
+  if (!matric) { showToast('Please enter your matric number', 'error'); return; }
+  if (!course) { showToast('Please enter your course code', 'error'); return; }
+
+  const check = checkDeviceBinding(matric);
+  if (!check.bound) {
+    if (check.daysSince < 30) {
+      showToast(`Device switch not allowed yet. Try in ${Math.ceil(30 - check.daysSince)} days.`, 'error');
+      return;
+    }
+    bindDevice(matric);
+  }
+  if (check.isNewBind) bindDevice(matric);
+
+  const name  = STATE.googleProfile.name;
+  const email = STATE.googleProfile.email;
+
+  STATE.role = 'student';
+  STATE.user = { name, course, matric, dept: '', googleEmail: email };
+  saveStateSnapshot();
+
+  DOM.studentName.textContent          = name;
+  DOM.studentMatricDisplay.textContent = `${matric} · ${course}`;
+  DOM.deviceChip.title                 = `Device: ${getDeviceShort()}`;
+  updateNavName('student', name, STATE.googleProfile.picture);
+  renderStudentHistory();
+  // Students don't have their own GAS URL — they get the lecturer's
+  // spreadsheet target embedded in the QR payload at scan time.
+  // sheetsReady just means "Google identity confirmed", not "Sheets connected yet".
+  showScreen('student');
+  syncOfflineQueue();
+  showToast(`Welcome, ${name.split(' ')[0]} — identity verified ✓`, 'success');
+}
+
+function updateNavName(role, name, picture) {
+  const first = name.split(' ')[0];
   if (role === 'lecturer') {
-    if (DOM.lecturerAvatar)      { DOM.lecturerAvatar.src = p.picture || ''; DOM.lecturerAvatar.style.display = p.picture ? '' : 'none'; }
-    if (DOM.lecturerDisplayName) DOM.lecturerDisplayName.textContent = firstName;
-    if (DOM.lecturerUserPill)    DOM.lecturerUserPill.style.display  = '';
+    if (DOM.lecturerDisplayName) DOM.lecturerDisplayName.textContent = first;
+    if (DOM.lecturerAvatar)      DOM.lecturerAvatar.style.display = 'none';
+    if (DOM.lecturerUserPill)    DOM.lecturerUserPill.style.display = '';
   } else {
-    if (DOM.studentNavAvatar)  { DOM.studentNavAvatar.src = p.picture || ''; DOM.studentNavAvatar.style.display = p.picture ? '' : 'none'; }
-    if (DOM.studentNavName)    DOM.studentNavName.textContent = firstName;
-    if (DOM.studentUserPill)   DOM.studentUserPill.style.display = '';
+    if (DOM.studentNavName) DOM.studentNavName.textContent = first;
+    if (DOM.studentNavAvatar) {
+      if (picture) { DOM.studentNavAvatar.src = picture; DOM.studentNavAvatar.style.display = ''; }
+      else DOM.studentNavAvatar.style.display = 'none';
+    }
+    if (DOM.studentUserPill) DOM.studentUserPill.style.display = '';
   }
 }
 
-function googleSignOut() {
-  const email = STATE.googleProfile?.email;
-  if (typeof google !== 'undefined' && google.accounts?.id) {
-    google.accounts.id.disableAutoSelect();
-    if (email) google.accounts.id.revoke(email, () => {});
-  }
-  clearSavedState();
-  STATE.role = null; STATE.user = null; STATE.googleProfile = null;
-  STATE.sheetsReady = false;
-  showScreen('auth');
-  initGoogleSSO();
-}
-
-// ─── Sheets status (replaces old updateSheetsIndicator) ──
 function updateSheetsStatus() {
   if (!DOM.sheetsSyncBadge) return;
   const ready = STATE.sheetsReady;
@@ -544,33 +499,26 @@ function setSyncStatus(status) {
   if (!DOM.sheetsSyncBadge) return;
   DOM.sheetsSyncBadge.className = `sheets-badge ${status}`;
   const labels = { syncing:'⟳ Syncing', ok:'✓ Sheets', error:'✗ Sheets' };
-  if (DOM.sheetsSyncText) DOM.sheetsSyncText.textContent = labels[status] || '✓ Sheets';
+  if (DOM.sheetsSyncText) DOM.sheetsSyncText.textContent = labels[status] || 'Sheets';
   if (DOM.sheetsSyncStatus) {
     DOM.sheetsSyncStatus.innerHTML = {
       syncing: '<span class="sync-idle">Syncing…</span>',
-      ok:      `<span class="sync-ok">✓ Last sync ${formatTime(new Date())}</span>`,
+      ok:      `<span class="sync-ok">✓ Synced ${formatTime(new Date())}</span>`,
       error:   '<span class="sync-err">✗ Sync failed</span>',
     }[status] || '—';
   }
 }
 
 async function pushToSheets(action, payload) {
-  if (!STATE.sheetsReady) return null;
+  if (!STATE.sheetsReady || !gasIsReady()) return null;
   try {
     setSyncStatus('syncing');
     const result = await sheetsRequest(action, payload);
     setSyncStatus('ok');
     return result;
   } catch(e) {
-    if (e.message === 'TOKEN_EXPIRED') {
-      // Try to refresh token silently
-      showToast('Refreshing Google session…', 'info');
-      if (window._schoolerTokenClient) {
-        window._schoolerTokenClient.requestAccessToken({ prompt: '' });
-      }
-    }
     setSyncStatus('error');
-    console.warn('[Sheets]', action, e.message);
+    console.warn('[GAS]', action, e.message);
     return null;
   }
 }
@@ -866,7 +814,7 @@ async function generateNewQR() {
     geo:  s.settings.geo, rad: s.settings.geoRadius,
     dev:  s.settings.device, slf: s.settings.selfie,
     ble:  s.settings.ble, v: APP_VERSION,
-    shid: sheetsGetUrl() || '',  // ← spreadsheetId for student writes
+    gas:  gasGetUrl() || '',  // ← lecturer's Apps Script URL — students write through THIS
   });
 
   DOM.qrSessionCode.textContent = s.id.slice(0, 8).toUpperCase();
@@ -948,14 +896,17 @@ function startSheetsAttendancePoll() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  SHEETS QR POLLING (STUDENT SIDE)
+//  LIVE QR POLLING (STUDENT SIDE — optional convenience)
+//  Only active if this device already has a GAS URL saved
+//  (e.g. lecturer testing on the same phone). Most students
+//  get everything fresh from each QR scan instead.
 // ═══════════════════════════════════════════════════════
 function startSheetsPoll() {
+  if (!gasIsReady()) return;
   DOM.sheetsPollingBar?.classList.remove('hidden');
   sheetsStartPolling((tokenData) => {
     STATE.liveSheetToken = tokenData;
-    // Visual feedback on the scan card subtitle
-    if (DOM.scanSubtitle) DOM.scanSubtitle.textContent = 'Live session found via Sheets — scan or tap below';
+    if (DOM.scanSubtitle) DOM.scanSubtitle.textContent = 'Live session found — scan or tap below';
   });
 }
 
@@ -1204,14 +1155,14 @@ async function handleQRData(raw) {
     return;
   }
 
-  // ── Extract spreadsheetId from QR payload so student can write to the RIGHT sheet
-  if (payload.shid) {
-    sheetsSetSpreadsheetId(payload.shid);
-  } else if (STATE.liveSheetToken?.spreadsheetId) {
-    sheetsSetSpreadsheetId(STATE.liveSheetToken.spreadsheetId);
+  // ── Extract the lecturer's Apps Script URL from the QR payload.
+  //    Students never type this — it's embedded by the lecturer's
+  //    device on every QR refresh so any student's scan can reach
+  //    the SAME script, which writes using the lecturer's access.
+  if (payload.gas) {
+    gasSetUrl(payload.gas);
   }
-  // If still no sheet ID, we'll queue offline
-  const hasSheetId = !!sheetsGetUrl();
+  const hasGasUrl = gasIsReady();
 
   // ── BLE check
   let bleVerified = false;
@@ -1269,21 +1220,19 @@ async function handleQRData(raw) {
   localStorage.setItem(deviceKey, '1');
   if (payload.dev) markSeenTodayForSession(STATE.user.matric, payload.sid);
 
-  // ── Submit to Sheets (or queue offline)
+  // ── Submit to the lecturer's Apps Script (or queue offline)
   let offlineQueued = false;
-  if (!STATE.isOnline || !STATE.sheetsReady || !hasSheetId) {
+  if (!STATE.isOnline || !hasGasUrl) {
     queueOfflineRecord(record);
     offlineQueued = true;
   } else {
     try {
       const result = await sheetsAppendAttendance(record);
       if (result.duplicate) {
-        // Sheets confirmed duplicate — still show success (first scan counted)
-        showStudentInfo('Already Recorded', 'This device was already recorded in Sheets. Your first scan counted.', payload);
+        showStudentInfo('Already Recorded', 'This device was already recorded for this session. Your first scan counted.', payload);
         return;
       }
     } catch(e) {
-      // Sheets write failed — queue offline and continue
       queueOfflineRecord(record);
       offlineQueued = true;
     }
@@ -1309,23 +1258,9 @@ function handleManualCode() {
   const raw = DOM.manualCode.value.trim();
   if (!raw) { showToast('Enter a session code or PIN', 'error'); return; }
 
-  // Try live Sheets token first
-  if (STATE.liveSheetToken) {
-    const t = STATE.liveSheetToken;
-    if (raw.toUpperCase() === t.sessionId?.slice(0,8).toUpperCase() ||
-        raw.toUpperCase() === (t.pin||'').toUpperCase()) {
-      const fakePayload = JSON.stringify({
-        sid: t.sessionId, tok: t.token, exp: t.expiry,
-        crs: t.course, pin: t.pin, date: t.date || todayKey(),
-        lat: t.lat, lng: t.lng,
-        geo: t.geo, rad: t.geoRadius,
-        dev: t.device, slf: t.selfie, ble: t.ble, v: APP_VERSION,
-      });
-      handleQRData(fakePayload); return;
-    }
-  }
-
-  // Try localStorage relay (same device)
+  // Manual code only works when testing on the SAME device as the lecturer
+  // (localStorage relay). On separate devices, students must scan the QR —
+  // the QR is what carries the lecturer's Apps Script URL to them.
   const relay = localStorage.getItem('schooler_session');
   if (relay) {
     try {
@@ -1338,13 +1273,14 @@ function handleManualCode() {
           geo: session.settings?.geo??false, rad: session.settings?.geoRadius??50,
           dev: session.settings?.device??true, slf: session.settings?.selfie??false,
           ble: session.settings?.ble??false, v: APP_VERSION,
+          gas: gasGetUrl() || '',
         });
         handleQRData(fakePayload); return;
       }
     } catch(e) {}
   }
 
-  showToast('Code not found. Make sure you have the correct session code from your lecturer.', 'error');
+  showToast('Code not found. On a different device, you must scan the QR — it carries the connection info your code alone cannot.', 'error');
 }
 
 // ─── Selfie capture ──────────────────────────────
@@ -1514,7 +1450,6 @@ function saveStateSnapshot() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       role: STATE.role, user: STATE.user,
-      googleProfile: STATE.googleProfile,
       session: STATE.session, attendance: STATE.attendance,
       studentHistory: STATE.studentHistory, offlineQueue: STATE.offlineQueue,
     }));
@@ -1534,20 +1469,21 @@ function clearSavedState() {
 function restoreSession(saved) {
   STATE.role           = saved.role;
   STATE.user           = saved.user;
-  STATE.googleProfile  = saved.googleProfile || null;
   STATE.attendance     = saved.attendance     || [];
   STATE.studentHistory = saved.studentHistory || [];
   STATE.offlineQueue   = saved.offlineQueue   || [];
-  // OAuth token is never persisted — always reacquired silently
-  STATE.sheetsReady = false;
+
+  // Restore GAS URL connection
+  if (gasGetUrl()) {
+    STATE.sheetsReady = true;
+  }
   updateSheetsStatus();
-  if (STATE.googleProfile) populateNavAvatar(STATE.role === 'lecturer' ? 'lecturer' : 'student');
+  if (STATE.user) updateNavName(STATE.role === 'lecturer' ? 'lecturer' : 'student', STATE.user.name);
 
   if (STATE.role === 'lecturer') {
     DOM.sessionCourse.value = STATE.user?.course || '';
     renderAttendanceTable(); updateStats();
     showScreen('lecturer');
-    silentReauth(); // reacquire OAuth token for Sheets API
 
     if (saved.session && saved.session.endsAt > Date.now() && saved.session.date === todayKey()) {
       STATE.session = saved.session;
@@ -1596,53 +1532,14 @@ function restoreSession(saved) {
     DOM.studentMatricDisplay.textContent = STATE.user.matric ? `${STATE.user.matric} · ${STATE.user.course}` : STATE.user.course;
     DOM.deviceChip.title                 = `Device: ${getDeviceShort()}`;
     renderStudentHistory();
-    silentReauth(); // reacquires token then startSheetsPoll() is called inside
+    startSheetsPoll();
     showScreen('student');
     updateOfflineUI();
     syncOfflineQueue();
     showToast(`Welcome back, ${STATE.user.name.split(' ')[0]}`, 'info');
   } else {
     showScreen('auth');
-    initGoogleSSO();
   }
-}
-
-/** Attempt silent OAuth token refresh via GIS (no popup) */
-function silentReauth() {
-  if (typeof google === 'undefined' || !google.accounts?.oauth2) return;
-  const clientId = window.SCHOOLER_CLIENT_ID;
-  if (!clientId || clientId === 'YOUR_CLIENT_ID.apps.googleusercontent.com') return;
-  const email = STATE.googleProfile?.email;
-  if (!email) return;
-
-  const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: clientId,
-    scope: [
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/drive.file',
-      'openid', 'email', 'profile',
-    ].join(' '),
-    hint: email, // hint skips account picker for known user
-    callback: async (tokenResponse) => {
-      if (tokenResponse.error) return;
-      sheetsSetToken(tokenResponse.access_token);
-      sheetsSetEmail(email);
-      if (STATE.role === 'lecturer') {
-        try {
-          await sheetsBootstrap(email);
-          STATE.sheetsReady = true;
-          updateSheetsStatus();
-          startSheetsAttendancePoll(); // restart lecturer poll after reauth
-        } catch(e) {}
-      } else {
-        STATE.sheetsReady = true;
-        updateSheetsStatus();
-        startSheetsPoll(); // restart student poll after reauth
-      }
-    },
-  });
-  // prompt:'' = silent if user already granted consent, no popup shown
-  tokenClient.requestAccessToken({ prompt: '' });
 }
 
 // ═══════════════════════════════════════════════════════
