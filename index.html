@@ -562,6 +562,17 @@
   window.SCHOOLER_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ═══ Force-nuke any old broken service worker before loading the app ═══
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    Promise.all(regs.map(r => r.unregister())).then(() => {
+      // All old SWs killed — clear every cache they left behind
+      caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))));
+    });
+  });
+}
+</script>
 <script src="js/qrgen.js"></script>
 <script src="js/jsQR.js"></script>
 <script src="js/xlsx.full.min.js"></script>

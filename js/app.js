@@ -1588,7 +1588,8 @@ function shuffleArray(arr) {
 // ═══════════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
+    // Cache-bust the SW URL so the browser always fetches the latest version
+    navigator.serviceWorker.register('sw.js?v=' + APP_VERSION)
       .then(() => console.log('[SCHOOLER] SW registered'))
       .catch(e => console.warn('[SCHOOLER] SW failed:', e));
   });

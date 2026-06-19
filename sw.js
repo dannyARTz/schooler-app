@@ -1,4 +1,4 @@
-const CACHE_NAME    = 'schooler-v1.3.0';
+const CACHE_NAME    = 'schooler-v1.3.1';
 const STATIC_ASSETS = [
   './', './index.html', './manifest.json',
   './css/style.css',
@@ -11,6 +11,11 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
       .then(c => c.addAll(STATIC_ASSETS))
+      .catch(err => {
+        // If pre-caching fails (e.g. network), don't block install —
+        // the network-first fallback in fetch will handle it.
+        console.warn('[SCHOOLER SW] Pre-cache warning:', err);
+      })
       .then(() => self.skipWaiting())
   );
 });
@@ -27,6 +32,9 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   // Don't cache Apps Script API calls
   if (e.request.url.includes('script.google.com')) return;
+  // Don't cache Google Sign-In or external resources
+  if (e.request.url.includes('googleapis.com') || e.request.url.includes('gstatic.com')) return;
+
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
@@ -36,7 +44,13 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => e.request.destination === 'document' ? caches.match('./index.html') : undefined);
+      }).catch(() => {
+        // Offline fallback: serve the shell for navigation requests
+        if (e.request.destination === 'document') {
+          return caches.match('./index.html');
+        }
+        return undefined;
+      });
     })
   );
 });
