@@ -1,10 +1,10 @@
-const CACHE_NAME    = 'schooler-v1.2.0';
+const CACHE_NAME    = 'schooler-v1.3.0';
 const STATIC_ASSETS = [
-  '/', '/index.html', '/manifest.json',
-  '/css/style.css',
-  '/js/app.js', '/js/sheets.js', '/js/ble.js',
-  '/js/qrgen.js', '/js/jsQR.js', '/js/xlsx.full.min.js',
-  '/icons/icon-192.png', '/icons/icon-512.png',
+  './', './index.html', './manifest.json',
+  './css/style.css',
+  './js/app.js', './js/sheets.js', './js/ble.js',
+  './js/qrgen.js', './js/jsQR.js', './js/xlsx.full.min.js',
+  './icons/icon-192.png', './icons/icon-512.png',
 ];
 
 self.addEventListener('install', e => {
@@ -36,7 +36,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => e.request.destination === 'document' ? caches.match('/index.html') : undefined);
+      }).catch(() => e.request.destination === 'document' ? caches.match('./index.html') : undefined);
     })
   );
 });

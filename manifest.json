@@ -2,12 +2,12 @@
   "name": "SCHOOLER – Smart Attendance",
   "short_name": "SCHOOLER",
   "description": "Geo-locked QR attendance platform for lecturers and students",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#080d1a",
   "theme_color": "#1a6cff",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "./",
   "lang": "en",
   "icons": [
     {
@@ -29,13 +29,13 @@
     {
       "name": "Lecturer Dashboard",
       "short_name": "Lecturer",
-      "url": "/index.html",
+      "url": "./index.html",
       "description": "Open lecturer dashboard"
     },
     {
       "name": "Scan Attendance",
       "short_name": "Scan",
-      "url": "/index.html",
+      "url": "./index.html",
       "description": "Open student scanner"
     }
   ]
