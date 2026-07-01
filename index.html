@@ -1,22 +1,21 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0a0f1e" />
-  <meta name="description" content="SCHOOLER – Smart Attendance Platform" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="SCHOOLER" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <title>SCHOOLER – Attendance Platform</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <meta name="theme-color" content="#0a0f1e"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="SCHOOLER"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png"/>
+  <title>SCHOOLER – Attendance</title>
+  <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
 
-<!-- ═══════════════════ SPLASH ═══════════════════ -->
+<!-- SPLASH -->
 <div id="splash" class="splash">
   <div class="splash-logo">
     <div class="splash-icon">
@@ -34,7 +33,7 @@
   <div class="splash-loader"><div class="splash-bar"></div></div>
 </div>
 
-<!-- ═══════════════════ AUTH ═══════════════════ -->
+<!-- AUTH -->
 <div id="authScreen" class="screen hidden">
   <div class="auth-container">
     <div class="auth-header">
@@ -59,89 +58,68 @@
       <span>This device is registered to another student account.</span>
     </div>
 
-    <div class="auth-form" id="authForm">
-      <!-- Lecturer-only: typed name -->
-      <div class="form-group" id="lecturerNameGroup">
+    <div class="auth-form">
+      <!-- LECTURER: name + GAS URL -->
+      <div id="lecturerNameGroup" class="form-group">
         <label>Full Name</label>
-        <input type="text" id="authName" placeholder="e.g. Dr. Emeka Okafor" autocomplete="name" />
+        <input type="text" id="authName" placeholder="e.g. Dr. Emeka Okafor"/>
       </div>
 
-      <!-- Student-only: Google Sign-In replaces typed name to prevent impersonation -->
+      <!-- STUDENT: Google SSO -->
       <div id="studentSSOGroup" style="display:none">
-        <div class="sso-hint">
-          Sign in with Google to verify your identity — your name and email come directly from your Google account, not typed text.
-        </div>
+        <p class="sso-hint">Sign in with Google — your verified name and email are sent directly to the lecturer's attendance sheet. No impersonation possible.</p>
         <div id="googleSignInBtn" class="google-btn-wrap"></div>
         <div id="studentVerifiedCard" class="verified-card hidden">
-          <img id="studentVerifiedAvatar" src="" alt="" class="verified-avatar" />
+          <img id="studentVerifiedAvatar" src="" alt="" class="verified-avatar"/>
           <div>
             <div id="studentVerifiedName" class="verified-name"></div>
             <div id="studentVerifiedEmail" class="verified-email"></div>
           </div>
-          <button class="btn-ghost" id="studentSwitchAccountBtn" style="margin-left:auto;">Switch</button>
+          <button class="btn-ghost" id="studentSwitchAccountBtn" style="margin-left:auto;font-size:.78rem">Switch</button>
         </div>
-        <button class="btn-ghost full-width" id="ssoFallbackBtn" style="display:none; margin-top:8px;">
-          Continue without Google (Local Only)
-        </button>
-        <div id="ssoError" class="alert-banner hidden" style="margin-top:10px;">
+        <button class="btn-ghost full-width" id="ssoFallbackBtn" style="display:none;margin-top:8px">Continue without Google (Dev/Offline)</button>
+        <div id="ssoError" class="alert-banner hidden" style="margin-top:10px">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span id="ssoErrorText">Sign-in failed. Please try again.</span>
+          <span id="ssoErrorText">Sign-in failed.</span>
         </div>
       </div>
 
-      <!-- Student only -->
-      <div class="form-group" id="matricGroup" style="display:none">
+      <!-- STUDENT: matric + course (after SSO) -->
+      <div id="matricGroup" class="form-group" style="display:none">
         <label>Matric Number</label>
-        <input type="text" id="authMatric" placeholder="e.g. U/EE/22/1234" />
+        <input type="text" id="authMatric" placeholder="e.g. U/EE/22/1234"/>
       </div>
-      <div class="form-group" id="courseGroup" style="display:none">
+      <div id="courseGroup" class="form-group" style="display:none">
         <label>Course Code</label>
-        <input type="text" id="authCourse" placeholder="e.g. CSC 325" />
+        <input type="text" id="authCourse" placeholder="e.g. CSC 325"/>
       </div>
 
-      <!-- Lecturer only: Apps Script URL -->
-      <div class="form-group" id="gasUrlGroup">
-        <label>
-          Apps Script URL
-          <span class="label-hint">— from your Google Sheets backend</span>
-        </label>
-        <input type="url" id="gasUrlInput"
-          placeholder="https://script.google.com/macros/s/…/exec"
-          autocomplete="url" />
-        <div class="field-note" id="gasUrlNote" style="display:none">
-          ✓ Connected — saved for this device
-        </div>
-        <div class="field-note" style="color:var(--text-muted); margin-top:4px;">
-          See <strong>SETUP.md</strong> in the zip for a 5-minute setup guide.
-          Students sign in with Google instead — no URL needed on their side.
-        </div>
+      <!-- LECTURER: Apps Script URL -->
+      <div id="gasUrlGroup" class="form-group">
+        <label>Apps Script URL <span class="label-hint">— your Sheets backend</span></label>
+        <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/…/exec"/>
+        <div id="gasUrlNote" class="field-note" style="display:none;color:var(--success)">✓ Connected and saved</div>
+        <div class="field-note" style="color:var(--text-muted);margin-top:4px">See SETUP.md for a 5-minute guide. Students don't need this.</div>
       </div>
 
-      <input type="hidden" id="authDept" />
-
+      <input type="hidden" id="authDept"/>
       <button class="btn-primary full-width" id="authBtn">Enter SCHOOLER</button>
     </div>
   </div>
 </div>
 
-<!-- completionScreen no longer needed — kept as empty hidden div for DOM compat -->
+<!-- hidden compat div kept for any old restoreSession references -->
 <div id="completionScreen" class="screen hidden"></div>
 
-<!-- ═══════════════════ LECTURER DASHBOARD ═══════════════════ -->
+<!-- LECTURER DASHBOARD -->
 <div id="lecturerDashboard" class="screen hidden">
-
   <nav class="navbar">
     <div class="nav-brand">
-      <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
-        <rect width="56" height="56" rx="14" fill="#1a6cff"/>
-        <path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/>
-        <path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/>
-      </svg>
+      <svg width="28" height="28" viewBox="0 0 56 56" fill="none"><rect width="56" height="56" rx="14" fill="#1a6cff"/><path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/><path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/></svg>
       <span>SCHOOLER</span>
     </div>
     <div class="nav-actions">
-      <!-- Sheets sync badge -->
-      <div class="sheets-badge" id="sheetsSyncBadge" title="Google Sheets sync status">
+      <div class="sheets-badge" id="sheetsSyncBadge">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span id="sheetsSyncText">Sheets</span>
       </div>
@@ -149,41 +127,26 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
         Offline
       </div>
-      <!-- Google avatar pill -->
-      <div class="nav-user-pill" id="lecturerUserPill">
-        <img id="lecturerAvatar" src="" alt="" class="nav-avatar" />
+      <div class="nav-user-pill hidden" id="lecturerUserPill">
+        <img id="lecturerAvatar" src="" alt="" class="nav-avatar" style="display:none"/>
         <span id="lecturerDisplayName" class="nav-username"></span>
       </div>
-      <button class="icon-btn" id="themeToggle" title="Toggle theme">
+      <button class="icon-btn" id="themeToggle">
         <svg id="themeIconDark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg id="themeIconLight" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-      <button class="icon-btn" id="lecturerLogout" title="Sign out">
+      <button class="icon-btn" id="lecturerLogout">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
       </button>
     </div>
   </nav>
 
   <main class="dashboard-main">
-
-    <!-- Stats -->
     <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-        <div class="stat-info"><span class="stat-num" id="statTotal">0</span><span class="stat-label">Present</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <div class="stat-info"><span class="stat-num" id="statRate">0%</span><span class="stat-label">Rate</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
-        <div class="stat-info"><span class="stat-num" id="statFlagged">0</span><span class="stat-label">Flagged</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-        <div class="stat-info"><span class="stat-num" id="statSession">—</span><span class="stat-label">Session</span></div>
-      </div>
+      <div class="stat-card"><div class="stat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="stat-info"><span class="stat-num" id="statTotal">0</span><span class="stat-label">Present</span></div></div>
+      <div class="stat-card"><div class="stat-icon green"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><div class="stat-info"><span class="stat-num" id="statRate">—</span><span class="stat-label">Rate</span></div></div>
+      <div class="stat-card"><div class="stat-icon amber"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></div><div class="stat-info"><span class="stat-num" id="statFlagged">0</span><span class="stat-label">Flagged</span></div></div>
+      <div class="stat-card"><div class="stat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-info"><span class="stat-num" id="statSession">—</span><span class="stat-label">Course</span></div></div>
     </div>
 
     <!-- Session Panel -->
@@ -192,144 +155,63 @@
         <h3>Session Control</h3>
         <div class="session-status" id="sessionStatusBadge"><span class="dot inactive"></span> Inactive</div>
       </div>
-
-      <!-- Config area -->
       <div id="startSessionArea">
         <div class="form-row">
-          <div class="form-group">
-            <label>Course</label>
-            <input type="text" id="sessionCourse" placeholder="e.g. CSC 325" />
-          </div>
-          <div class="form-group">
-            <label>Duration (mins)</label>
-            <input type="number" id="sessionDuration" value="60" min="5" max="300" />
-          </div>
+          <div class="form-group"><label>Course</label><input type="text" id="sessionCourse" placeholder="e.g. CSC 325"/></div>
+          <div class="form-group"><label>Duration (mins)</label><input type="number" id="sessionDuration" value="60" min="5" max="300"/></div>
         </div>
-
         <div class="settings-section">
           <div class="settings-title">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            Anti-Cheating Settings
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Anti-Cheating
           </div>
           <div class="toggle-group">
-            <div class="toggle-item">
-              <div class="toggle-info">
-                <span class="toggle-label">Dynamic QR Codes</span>
-                <span class="toggle-desc">Cryptographically signed. Refreshes every 10 seconds via Google Sheets. Screenshots useless.</span>
-              </div>
-              <label class="toggle-switch"><input type="checkbox" id="settingQR" checked disabled /><span class="toggle-track"></span></label>
-            </div>
-            <div class="toggle-item">
-              <div class="toggle-info">
-                <span class="toggle-label">Device Binding</span>
-                <span class="toggle-desc">One device per student per day. Duplicate scans from same device are silently rejected.</span>
-              </div>
-              <label class="toggle-switch"><input type="checkbox" id="settingDevice" checked /><span class="toggle-track"></span></label>
-            </div>
-            <div class="toggle-item">
-              <div class="toggle-info">
-                <span class="toggle-label">Random Spot Checks</span>
-                <span class="toggle-desc">Randomly selects <strong>5%</strong> of attendees for physical presence confirmation.</span>
-              </div>
-              <label class="toggle-switch"><input type="checkbox" id="settingSpotCheck" checked /><span class="toggle-track"></span></label>
-            </div>
-            <div class="settings-advisory">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              Geolocation and Bluetooth improve verification but may fail on some devices or environments. Enable only when additional security is required.
-            </div>
-            <div class="toggle-item">
-              <div class="toggle-info">
-                <span class="toggle-label">Geolocation Verification</span>
-                <span class="toggle-desc">Students must be within set radius of classroom. Disabled = no GPS needed.</span>
-              </div>
-              <label class="toggle-switch"><input type="checkbox" id="settingGeo" /><span class="toggle-track"></span></label>
-            </div>
-            <div class="toggle-subfield hidden" id="geoRadiusField">
-              <label>Radius (metres)</label>
-              <input type="number" id="geoRadius" value="50" min="10" max="500" />
-              <span class="field-note">⚠ GPS accuracy indoors may be unreliable.</span>
-            </div>
-            <div class="toggle-item">
-              <div class="toggle-info">
-                <span class="toggle-label">Bluetooth (BLE) Verification</span>
-                <span class="toggle-desc">Confirms proximity via Bluetooth beacon. Fallback to QR if unsupported.</span>
-              </div>
-              <label class="toggle-switch"><input type="checkbox" id="settingBLE" /><span class="toggle-track"></span></label>
-            </div>
-            <div class="toggle-item">
-              <div class="toggle-info">
-                <span class="toggle-label">Selfie Verification</span>
-                <span class="toggle-desc">Students capture a live photo after scanning. Lecturer can override failures.</span>
-              </div>
-              <label class="toggle-switch"><input type="checkbox" id="settingSelfie" /><span class="toggle-track"></span></label>
-            </div>
+            <div class="toggle-item"><div class="toggle-info"><span class="toggle-label">Dynamic QR</span><span class="toggle-desc">Refreshes every 10 s via Sheets. Screenshots useless.</span></div><label class="toggle-switch"><input type="checkbox" id="settingQR" checked disabled/><span class="toggle-track"></span></label></div>
+            <div class="toggle-item"><div class="toggle-info"><span class="toggle-label">Device Binding</span><span class="toggle-desc">One device per student per session.</span></div><label class="toggle-switch"><input type="checkbox" id="settingDevice" checked/><span class="toggle-track"></span></label></div>
+            <div class="toggle-item"><div class="toggle-info"><span class="toggle-label">Random Spot Checks</span><span class="toggle-desc">5% of attendees selected for physical confirmation.</span></div><label class="toggle-switch"><input type="checkbox" id="settingSpotCheck" checked/><span class="toggle-track"></span></label></div>
+            <div class="settings-advisory"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Geolocation and BLE improve security but may fail on some devices. Enable only when needed.</div>
+            <div class="toggle-item"><div class="toggle-info"><span class="toggle-label">Geolocation</span><span class="toggle-desc">Students must be within set radius of classroom.</span></div><label class="toggle-switch"><input type="checkbox" id="settingGeo"/><span class="toggle-track"></span></label></div>
+            <div id="geoRadiusField" class="toggle-subfield hidden"><label>Radius (m)</label><input type="number" id="geoRadius" value="50" min="10" max="500"/><span class="field-note">⚠ GPS may be unreliable indoors.</span></div>
+            <div class="toggle-item"><div class="toggle-info"><span class="toggle-label">Bluetooth (BLE)</span><span class="toggle-desc">Proximity check via beacon. Falls back to QR.</span></div><label class="toggle-switch"><input type="checkbox" id="settingBLE"/><span class="toggle-track"></span></label></div>
+            <div class="toggle-item"><div class="toggle-info"><span class="toggle-label">Selfie Verification</span><span class="toggle-desc">Live photo captured after scan.</span></div><label class="toggle-switch"><input type="checkbox" id="settingSelfie"/><span class="toggle-track"></span></label></div>
           </div>
         </div>
-
         <button class="btn-primary" id="startSessionBtn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-          Start Session & Generate QR
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          Start Session
         </button>
       </div>
 
-      <!-- Active session -->
-      <div id="activeSessionArea" style="display:none;">
+      <div id="activeSessionArea" style="display:none">
         <div class="active-session-grid">
           <div class="qr-block">
-            <div class="qr-label">Dynamic QR Code</div>
+            <div class="qr-label">Rotating QR Code</div>
             <div class="qr-wrapper">
               <canvas id="qrCanvas" width="220" height="220"></canvas>
-              <div class="qr-overlay" id="qrCountdown">
-                <span id="countdownNum">10</span>
-                <small>refreshing</small>
+              <div class="qr-overlay">
+                <span id="countdownNum">10</span><small>sec</small>
               </div>
             </div>
             <div class="qr-meta">
               <span id="qrSessionCode" class="code-badge">—</span>
-              <span class="qr-hint">Synced to Sheets every 10s • Cross-device</span>
+              <span class="qr-hint">Updates every 10s · Synced to Sheets</span>
             </div>
-            <!-- BLE beacon button -->
-            <button class="btn-ble" id="bleBeaconBtn" style="display:none;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7 L12 2 L18 7 L18 12 L12 17 L6 12 Z"/><path d="M12 2 L12 22"/><path d="M9 5 L6 7"/><path d="M15 5 L18 7"/></svg>
+            <button class="btn-ble" id="bleBeaconBtn" style="display:none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 7L12 2L18 7L18 12L12 17L6 12Z"/><path d="M12 2L12 22"/></svg>
               <span id="bleBeaconText">Activate BLE Beacon</span>
             </button>
           </div>
-
           <div class="session-info-block">
-            <div class="info-item">
-              <span class="info-label">Course</span>
-              <span class="info-val" id="activeCourseName">—</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Date</span>
-              <span class="info-val" id="activeSessionDate">—</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Started</span>
-              <span class="info-val" id="activeStartTime">—</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Ends In</span>
-              <span class="info-val" id="activeTimeLeft" style="color:var(--accent-blue);">—</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Geo-fence</span>
-              <span class="info-val" id="geoStatusDisplay"><span class="dot" style="background:var(--text-muted)"></span> Disabled</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Sheets Sync</span>
-              <span class="info-val" id="sheetsSyncStatus">—</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Active Checks</span>
-              <span class="info-val" id="activeChecksDisplay">—</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">Session PIN</span>
-              <span class="info-val code-badge" id="activePIN">—</span>
-            </div>
+            <div class="info-item"><span class="info-label">Course</span><span class="info-val" id="activeCourseName">—</span></div>
+            <div class="info-item"><span class="info-label">Date</span><span class="info-val" id="activeSessionDate">—</span></div>
+            <div class="info-item"><span class="info-label">Started</span><span class="info-val" id="activeStartTime">—</span></div>
+            <div class="info-item"><span class="info-label">Ends In</span><span class="info-val" id="activeTimeLeft" style="color:var(--accent-blue)">—</span></div>
+            <div class="info-item"><span class="info-label">Geo-fence</span><span class="info-val" id="geoStatusDisplay">Disabled</span></div>
+            <div class="info-item"><span class="info-label">Sheets Sync</span><span class="info-val" id="sheetsSyncStatus">—</span></div>
+            <div class="info-item"><span class="info-label">Active Checks</span><span class="info-val" id="activeChecksDisplay">—</span></div>
+            <div class="info-item"><span class="info-label">PIN</span><span class="info-val code-badge" id="activePIN">—</span></div>
             <button class="btn-danger" id="endSessionBtn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
               End Session
             </button>
           </div>
@@ -337,19 +219,13 @@
       </div>
     </div>
 
-    <!-- Spot Check Panel -->
+    <!-- Spot Check -->
     <div class="panel hidden" id="spotCheckPanel">
       <div class="panel-header">
-        <h3>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--amber)"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          Spot Check
-        </h3>
-        <button class="btn-ghost" id="triggerSpotCheckBtn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          New Check
-        </button>
+        <h3>Spot Check</h3>
+        <button class="btn-ghost" id="triggerSpotCheckBtn">New Check</button>
       </div>
-      <div class="spot-check-note">Please confirm the presence of the following students.</div>
+      <div class="spot-check-note">Confirm physical presence of selected students.</div>
       <div id="spotCheckList" class="spot-check-list"></div>
     </div>
 
@@ -360,34 +236,26 @@
         <div class="panel-actions">
           <button class="btn-ghost" id="clearAttendanceBtn">Clear</button>
           <button class="btn-export" id="exportBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Export Excel
           </button>
         </div>
       </div>
       <div class="table-wrap">
         <table class="attendance-table">
-          <thead>
-            <tr><th>#</th><th>Name</th><th>Matric</th><th>Date</th><th>Time</th><th>Distance</th><th>Device</th><th>BLE</th><th>Status</th></tr>
-          </thead>
+          <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Matric</th><th>Date</th><th>Time</th><th>Dist</th><th>BLE</th><th>Status</th></tr></thead>
           <tbody id="attendanceBody"></tbody>
         </table>
       </div>
     </div>
-
   </main>
 </div>
 
-<!-- ═══════════════════ STUDENT DASHBOARD ═══════════════════ -->
+<!-- STUDENT DASHBOARD -->
 <div id="studentDashboard" class="screen hidden">
-
   <nav class="navbar">
     <div class="nav-brand">
-      <svg width="28" height="28" viewBox="0 0 56 56" fill="none">
-        <rect width="56" height="56" rx="14" fill="#1a6cff"/>
-        <path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/>
-        <path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/>
-      </svg>
+      <svg width="28" height="28" viewBox="0 0 56 56" fill="none"><rect width="56" height="56" rx="14" fill="#1a6cff"/><path d="M28 10 L46 20 L46 22 L28 32 L10 22 L10 20 Z" fill="white" opacity="0.95"/><path d="M16 25 L16 38 Q28 44 40 38 L40 25 L28 31 Z" fill="white" opacity="0.7"/></svg>
       <span>SCHOOLER</span>
     </div>
     <div class="nav-actions">
@@ -395,65 +263,55 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
         Offline
       </div>
-      <!-- Google avatar pill (student) -->
-      <div class="nav-user-pill" id="studentUserPill">
-        <img id="studentNavAvatar" src="" alt="" class="nav-avatar" />
+      <div class="nav-user-pill hidden" id="studentUserPill">
+        <img id="studentNavAvatar" src="" alt="" class="nav-avatar" style="display:none"/>
         <span id="studentNavName" class="nav-username"></span>
       </div>
-      <button class="icon-btn" id="themeToggleStudent" title="Toggle theme">
+      <button class="icon-btn" id="themeToggleStudent">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       </button>
-      <button class="icon-btn" id="studentLogout" title="Sign out">
+      <button class="icon-btn" id="studentLogout">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
       </button>
     </div>
   </nav>
 
   <main class="student-main">
-
-    <!-- Offline queue banner -->
     <div id="offlineQueueBanner" class="alert-banner amber hidden">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <span>Your attendance has been saved locally and will sync once internet access is restored.</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+      <span>Attendance saved locally — will sync when internet returns.</span>
     </div>
-
-    <!-- Spot check notification -->
     <div id="spotCheckNotification" class="alert-banner blue hidden">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      <span>You have been selected for a presence check. Please raise your hand.</span>
+      <span>You have been selected for a spot check. Please raise your hand.</span>
     </div>
 
-    <!-- Hero card -->
     <div class="student-hero">
       <div class="student-avatar">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <img id="studentHeroAvatar" src="" alt="" style="display:none;width:52px;height:52px;border-radius:50%;object-fit:cover"/>
+        <svg id="studentHeroIcon" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </div>
       <div>
         <h2 id="studentName">Student</h2>
         <p id="studentMatricDisplay" class="student-meta">—</p>
       </div>
       <div class="device-chip" id="deviceChip">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
         Bound
       </div>
     </div>
 
-    <!-- Scan card -->
     <div class="scan-card" id="scanCard">
       <div class="scan-header">
         <h3>Mark Attendance</h3>
-        <p id="scanSubtitle">Position your camera over the lecturer's QR code</p>
+        <p id="scanSubtitle">Point your camera at the lecturer's QR code</p>
       </div>
-
-      <!-- Sheets polling indicator -->
-      <div id="sheetsPollingBar" class="sheets-polling-bar hidden">
-        <div class="polling-dot"></div>
-        <span>Synced with Sheets — checking for live session…</span>
+      <div class="sheets-polling-bar hidden" id="sheetsPollingBar">
+        <div class="polling-dot"></div><span>Polling for live session…</span>
       </div>
-
       <div class="scanner-wrap">
         <video id="scannerVideo" autoplay muted playsinline></video>
-        <canvas id="scannerCanvas" style="display:none;"></canvas>
+        <canvas id="scannerCanvas" style="display:none"></canvas>
         <div class="scan-frame">
           <div class="corner tl"></div><div class="corner tr"></div>
           <div class="corner bl"></div><div class="corner br"></div>
@@ -461,57 +319,52 @@
         </div>
         <div class="scan-hint" id="scanHint">Tap to start camera</div>
       </div>
-
       <button class="btn-primary full-width" id="startScanBtn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><path d="M21 16h-3a2 2 0 0 0-2 2v3M21 21v.01M12 7v3a2 2 0 0 1-2 2H7M3 12h.01M12 3h.01M12 16v.01M16 12h1a2 2 0 0 1 2 2v1"/></svg>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><path d="M21 16h-3a2 2 0 0 0-2 2v3M21 21v.01M12 7v3a2 2 0 0 1-2 2H7M3 12h.01M12 3h.01M12 16v.01M16 12h1a2 2 0 0 1 2 2v1"/></svg>
         Start Scanner
       </button>
-
       <details class="manual-fallback">
-        <summary>Enter session code manually</summary>
+        <summary>Enter code manually</summary>
         <div class="manual-form">
-          <input type="text" id="manualCode" placeholder="8-char code or PIN from lecturer" maxlength="20" />
+          <input type="text" id="manualCode" placeholder="8-char session code or PIN" maxlength="20"/>
           <button class="btn-secondary" id="manualSubmitBtn">Submit</button>
         </div>
       </details>
     </div>
 
-    <!-- Status card -->
     <div class="status-card hidden" id="statusCard">
       <div class="status-icon" id="statusIcon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <h3 id="statusTitle">Attendance Marked!</h3>
-      <p id="statusMsg">You have been recorded for this session.</p>
+      <p id="statusMsg">You've been recorded.</p>
       <div class="status-meta" id="statusMeta"></div>
       <button class="btn-ghost" id="scanAgainBtn">Scan Another</button>
     </div>
 
-    <!-- Attendance History -->
     <div class="panel" id="historyPanel">
       <div class="panel-header">
-        <h3>My Attendance History</h3>
+        <h3>My Attendance</h3>
         <span class="stat-chip" id="historyRate">—</span>
       </div>
       <div id="historyList" class="history-list">
-        <div class="empty-state" style="padding:24px;">
+        <div class="empty-state" style="padding:24px">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          <p>No attendance records yet</p>
+          <p>No records yet</p>
         </div>
       </div>
     </div>
-
   </main>
 </div>
 
-<!-- ═══════════════════ TOAST ═══════════════════ -->
+<!-- TOAST -->
 <div id="toast" class="toast hidden"></div>
 
-<!-- ═══════════════════ MODAL ═══════════════════ -->
+<!-- MODAL -->
 <div id="modal" class="modal-overlay hidden">
   <div class="modal-box">
     <h3 id="modalTitle">Confirm</h3>
-    <p id="modalMsg">Are you sure?</p>
+    <p id="modalMsg"></p>
     <div class="modal-actions">
       <button class="btn-ghost" id="modalCancel">Cancel</button>
       <button class="btn-danger" id="modalConfirm">Confirm</button>
@@ -519,60 +372,29 @@
   </div>
 </div>
 
-<!-- Selfie modal -->
+<!-- SELFIE MODAL -->
 <div id="selfieModal" class="modal-overlay hidden">
   <div class="modal-box">
     <h3>Selfie Verification</h3>
-    <p>Take a live photo to confirm your identity. Your image is used for this session only.</p>
-    <div class="selfie-wrap">
-      <video id="selfieVideo" autoplay muted playsinline></video>
-      <canvas id="selfieCanvas" style="display:none;"></canvas>
-    </div>
+    <p>Capture a live photo to confirm your identity.</p>
+    <div class="selfie-wrap"><video id="selfieVideo" autoplay muted playsinline></video><canvas id="selfieCanvas" style="display:none"></canvas></div>
     <div class="modal-actions">
-      <button class="btn-ghost" id="selfieCancelBtn">Cancel</button>
-      <button class="btn-primary" id="selfieCaptureBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-        Capture
-      </button>
+      <button class="btn-ghost" id="selfieCancelBtn">Skip</button>
+      <button class="btn-primary" id="selfieCaptureBtn">Capture</button>
     </div>
   </div>
 </div>
 
 <!--
-  ══════════════════════════════════════════════════
-  GOOGLE SIGN-IN  (students only — identity verification)
-  ──────────────────────────────────────────────────
-  Lecturers do NOT need this — they connect via their
-  Apps Script URL instead (see auth screen).
-
-  Students use Google Sign-In so their name/email come
-  from a verified Google account, not free text. This
-  prevents one student typing another student's name.
-
-  Setup:
-  1. https://console.cloud.google.com → new/select project
-  2. APIs & Services → OAuth consent screen → configure
-  3. Credentials → Create OAuth 2.0 Client ID
-     → Application type: Web application
-     → Authorized JavaScript origins: your deployed domain
-  4. Copy the Client ID, paste below
-  ══════════════════════════════════════════════════
+  GOOGLE SIGN-IN (students only — identity verification)
+  Replace YOUR_CLIENT_ID below with your OAuth 2.0 Client ID
+  from Google Cloud Console. See SETUP.md for instructions.
+  Lecturers do NOT need this.
 -->
 <script>
   window.SCHOOLER_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 </script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
-// ═══ Force-nuke any old broken service worker before loading the app ═══
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    Promise.all(regs.map(r => r.unregister())).then(() => {
-      // All old SWs killed — clear every cache they left behind
-      caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))));
-    });
-  });
-}
-</script>
 <script src="js/qrgen.js"></script>
 <script src="js/jsQR.js"></script>
 <script src="js/xlsx.full.min.js"></script>
